@@ -1,34 +1,36 @@
-# Sprint 00 — DEV Scaffold Code Review
+# Sprint 00 — DEV Scaffold: CTO Review Report
 
 **From:** `[DEV:scaffold]`
 **To:** `[CTO]`
 **Date:** 2026-02-21
+**Revision:** 2 (consolidated — covers all QA rounds)
 **Scope:** `src/shared/`, `src/background/`, `src/content/`, `src/popup/`, `tests/unit/`, `vitest.config.ts`, `public/icons/`
 
 ---
 
 ## Summary
 
-Sprint 00 DEV scaffold is complete. All issues raised in the initial self-review have been implemented (not just flagged). This document captures the before/after of each fix for CTO sign-off.
+Sprint 00 DEV scaffold is complete. Seven issues were identified across two QA review rounds — all implemented and verified. This document is the definitive consolidated record for CTO sign-off.
 
 ---
 
-## Verification Gates (All Green)
+## Final Verification Gates
 
 | Gate | Result |
 |---|---|
-| `npm run build` | ✅ Clean — `dist/` generated |
-| `npx tsc --noEmit` | ✅ Zero errors |
-| `npx eslint src/` | ✅ Zero errors |
-| `npx vitest run` | ✅ 11/11 passing |
-| Icon files in `dist/icons/` | ✅ Valid PNGs (0.07 kB each) |
-| `src/shared/` — zero Chrome API | ✅ Verified |
+| `npm run build` | ✅ Clean — `dist/` generated, all assets present |
+| `npx tsc --noEmit` | ✅ Zero type errors |
+| `npx eslint src/` | ✅ Zero lint errors |
+| `npx vitest run` | ✅ 11/11 passing, single-pass output (`···········`) |
+| `dist/icons/*.png` | ✅ Valid PNGs — 0.07 kB each |
+| `src/shared/` — zero Chrome runtime API | ✅ Verified |
+| `MessageHandler` matches Chrome API signature | ✅ `sender` param present |
 
 ---
 
-## Fix 1 — `src/shared/messages.ts`: Chrome API violation removed
+## Fix 1 — `src/shared/messages.ts`: Chrome runtime API removed
 
-**Issue:** `sendMessage()` and `onMessage()` called `chrome.runtime.*` directly from `src/shared/`, which violated the "zero Chrome API dependencies" constraint in AGENTS.md §4.3.
+**Issue:** `sendMessage()` and `onMessage()` called `chrome.runtime.*` directly from `src/shared/`, violating the "zero Chrome API dependencies" constraint in AGENTS.md §4.3.
 
 **Before:**
 ```typescript
@@ -48,6 +50,7 @@ export const onMessage = (handler: ...) => {
 ```typescript
 export type MessageHandler<T = unknown> = (
   message: ChromeMessage,
+  sender: chrome.runtime.MessageSender,
   sendResponse: (response: ChromeResponse<T>) => void
 ) => boolean | void;
 
@@ -56,17 +59,20 @@ export type MessageHandler<T = unknown> = (
 // where chrome.runtime is in scope.
 ```
 
-**Impact:** `src/shared/` is now fully Chrome-API-free. The `MessageHandler` type is available for Sprint 01 background/content implementations.
+**Notes:**
+- `src/shared/` is now fully Chrome-runtime-API-free.
+- `chrome.runtime.MessageSender` is a TypeScript type declaration from `@types/chrome` (devDep), not a runtime call — safe in `shared/`.
+- `MessageHandler` includes `sender` to match the real `chrome.runtime.onMessage.addListener` signature exactly (QA Flag A, Round 2).
 
 ---
 
-## Fix 2 — `src/background/service-worker.ts`: Chrome API inlined correctly
+## Fix 2 — `src/background/service-worker.ts`: Chrome API inlined at correct scope
 
-**Issue:** `service-worker.ts` imported `onMessage` from `@shared/index`. After Fix 1 removed the function from shared, the import needed updating. More importantly, the `chrome.runtime` call now lives where it belongs.
+**Issue:** `service-worker.ts` imported `onMessage` from `@shared/index`. After Fix 1, the import was broken and the Chrome API needed to live in the background module directly.
 
 **Before:**
 ```typescript
-import { onMessage } from '@shared/index'; // ← imported Chrome wrapper from shared/
+import { onMessage } from '@shared/index'; // ← Chrome wrapper imported from shared/
 onMessage((message, _sender, sendResponse) => { ... });
 ```
 
@@ -83,7 +89,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 ## Fix 3 — `src/shared/utils.ts`: `generateBugId()` upgraded to `crypto.randomUUID()`
 
-**Issue:** `Math.random().toString(36).substring(2, 7)` produced 5-char base36 strings (~60M combinations). Collision risk acceptable for Sprint 00 but incorrect approach for a production ID generator.
+**Issue:** `Math.random().toString(36).substring(2, 7)` produced 5-char base36 strings (~60M combinations). Not cryptographically secure; unsuitable for a production ID generator.
 
 **Before:**
 ```typescript
@@ -100,11 +106,11 @@ export const generateBugId = (): string => {
 };
 ```
 
-**New format:** `bug-XXXXXXXX` where `XXXXXXXX` is the first 8-char hex segment of a UUID v4 (cryptographically random, ~4 billion combinations per segment, globally unique in practice).
+**New format:** `bug-XXXXXXXX` — first 8-char hex segment of a UUID v4. Cryptographically random, ~4 billion combinations per call.
 
 ---
 
-## Fix 4 — `tests/unit/shared/utils.test.ts`: Test updated for new format
+## Fix 4 — `tests/unit/shared/utils.test.ts`: Updated for new ID format + uniqueness proof
 
 **Before:**
 ```typescript
@@ -128,134 +134,84 @@ it('should generate unique IDs across 100 calls', () => {
 
 ---
 
-## Fix 5 — `public/icons/*.png`: Valid PNG placeholders created
+## Fix 5 — `public/icons/*.png`: Valid PNG placeholders (QA D018-BUG)
 
-**Issue (D018-BUG flagged by QA):** Icon files were 0-byte. `dist/icons/` received 0-byte copies. Chrome loads the extension but shows the broken/default puzzle-piece icon.
+**Issue (QA D018-BUG):** Icon files were 0-byte. `dist/icons/` received 0-byte copies. Chrome loaded the extension but showed the default puzzle-piece icon.
 
-**Fix:** Created minimal valid 1×1 transparent PNG files (68 bytes each) for all 4 required sizes: `icon-16.png`, `icon-32.png`, `icon-48.png`, `icon-128.png`.
+**Fix:** Created minimal valid 1×1 transparent PNG files (68 bytes each) for all 4 required sizes.
 
-**Build output (before → after):**
-```
-before: dist/icons/icon-16.png    0.00 kB
-after:  dist/icons/icon-16.png    0.07 kB  ← valid PNG
-```
-
-**Note for CTO:** Branded icons (SynaptixLabs orange/blue palette) are deferred to Sprint 01 per sprint index item #3 (Open Questions).
-
----
-
-## Remaining Open Items (Not Sprint 00 Scope)
-
-| Item | Target | Notes |
+| File | Before | After |
 |---|---|---|
-| `sendMessage()` implementation | Sprint 01 | Goes in `src/background/messaging.ts` |
-| `onMessage()` implementation | Sprint 01 | Goes in `src/content/messaging.ts` |
-| Branded icon assets | Sprint 01 | Replace 1×1 placeholders with real brand icons |
-| Keep-alive for MV3 service worker | Sprint 01 | `chrome.alarms` pattern — `TODO` comment in place |
+| `dist/icons/icon-16.png` | 0.00 kB | 0.07 kB ✅ |
+| `dist/icons/icon-32.png` | 0.00 kB | 0.07 kB ✅ |
+| `dist/icons/icon-48.png` | 0.00 kB | 0.07 kB ✅ |
+| `dist/icons/icon-128.png` | 0.00 kB | 0.07 kB ✅ |
+
+**Sprint 01 follow-up:** Replace 1×1 placeholders with branded SynaptixLabs icons.
 
 ---
 
-## CTO Sign-Off Requested
+## Fix 6 — `src/shared/messages.ts`: `MessageHandler` sender param (QA Flag A, Round 2)
 
-- [ ] Architecture compliance: `src/shared/` Chrome-API-free ✅
-- [ ] `generateBugId()` uses `crypto.randomUUID()` ✅
-- [ ] Build + tests green ✅
-- [ ] D018-BUG resolved ✅
-- [ ] Sprint 01 kickoff doc (item #31 in sprint index) — pending CTO
+Covered in Fix 1 above. The initial implementation omitted `sender: chrome.runtime.MessageSender` from `MessageHandler<T>`, making the type incompatible with the real Chrome API signature. Added in the same file update.
 
 ---
 
-*`[DEV:scaffold]` — Sprint 00 complete. Ready for Sprint 01.*
+## Fix 7 — `vitest.config.ts`: Double-reporting eliminated (QA Flag B, Round 2)
 
----
+**Issue:** Each test file appeared twice in `npx vitest run` terminal output (visual artifact — counts were always correct).
 
-## QA Flag Resolutions (Round 2)
+**Root cause:** Vitest 2.x `verbose`/`default` reporters emit incremental per-worker updates AND a final summary pass. With 2 worker threads and 2 test files, every file was printed 2–3 times.
 
-**QA reviewed all 5 fixes — all ✅. Two additional flags raised and implemented:**
+**Investigation path:**
+| Attempt | Outcome |
+|---|---|
+| Remove `globals: true` | Still doubled |
+| Remove `/// <reference types="vitest" />` | Still doubled |
+| `pool: 'forks', singleFork: true` | Tripled (worse) |
+| Switch to `reporter: 'dot'` | ✅ Single-pass clean output |
 
-### Flag A — MessageHandler type: sender parameter added
-
-**Issue:** MessageHandler<T> was missing sender: chrome.runtime.MessageSender, making it incompatible with the real chrome.runtime.onMessage.addListener signature.
-
-**Before:**
-```typescript
-export type MessageHandler<T = unknown> = (
-  message: ChromeMessage,
-  sendResponse: (response: ChromeResponse<T>) => void
-) => boolean | void;
-```
-
-**After:**
-```typescript
-export type MessageHandler<T = unknown> = (
-  message: ChromeMessage,
-  sender: chrome.runtime.MessageSender,
-  sendResponse: (response: ChromeResponse<T>) => void
-) => boolean | void;
-```
-
-**Note:** chrome.runtime.MessageSender is a TypeScript type declaration from @types/chrome (devDep) — not a runtime Chrome API call. The Chrome-API-free constraint on src/shared/ refers to runtime calls only. This type is safe in shared/.
-
----
-
-### Flag B — Vitest double-reporting: fixed via eporter: 'dot'
-
-**Issue:** Each test file appeared twice in 
-px vitest run output (visual artifact, counts were correct).
-
-**Root cause investigation:**
-- Removing globals: true → still doubled
-- Removing /// <reference types="vitest" /> → still doubled  
-- pool: 'forks', singleFork: true → tripled (worse)
-- **Root cause:** Vitest 2.x verbose/default reporters emit incremental updates per worker thread AND a final summary pass, causing files to appear 2-3x.
-
-**Fix:** Changed eporter: 'verbose' → eporter: 'dot'. The dot reporter outputs one dot per passing test, final summary only — no per-file duplication.
-
-**Before:**
+**Before (`reporter: 'verbose'`):**
 ```
 ✓ tests/unit/shared/constants.test.ts (5)
 ✓ tests/unit/shared/utils.test.ts (6)
 ✓ tests/unit/shared/constants.test.ts (5)   ← duplicate
 ✓ tests/unit/shared/utils.test.ts (6)        ← duplicate
+
+Test Files  2 passed (2) | Tests  11 passed (11)
 ```
 
-**After:**
+**After (`reporter: 'dot'`):**
 ```
 ···········
 
-Test Files  2 passed (2)
-Tests  11 passed (11)
+Test Files  2 passed (2) | Tests  11 passed (11)
 ```
 
 ---
 
-## Updated Verification Gates
+## Open Items Deferred to Sprint 01
 
-| Gate | Result |
-|---|---|
-| 
-pm run build | ✅ Clean |
-| 
-px tsc --noEmit | ✅ Zero errors |
-| 
-px eslint src/ | ✅ Zero errors |
-| 
-px vitest run | ✅ 11/11, single-pass output |
-| MessageHandler matches Chrome API signature | ✅ sender param added |
-| src/shared/ — zero Chrome runtime API | ✅ Verified |
+| Item | File | Notes |
+|---|---|---|
+| `sendMessage()` implementation | `src/background/messaging.ts` (new) | Chrome runtime in correct scope |
+| `onMessage()` implementation | `src/content/messaging.ts` (new) | Chrome runtime in correct scope |
+| Branded icon assets | `public/icons/*.png` | Replace 1×1 placeholders |
+| MV3 service worker keep-alive | `src/background/service-worker.ts` | `chrome.alarms` pattern, TODO in place |
 
 ---
 
-## Updated CTO Sign-Off Requested
+## CTO Sign-Off Checklist
 
-- [ ] Architecture compliance: src/shared/ Chrome-API-free ✅
-- [ ] generateBugId() uses crypto.randomUUID() ✅
-- [ ] MessageHandler type matches real Chrome onMessage signature ✅
-- [ ] Vitest output clean — no double-reporting ✅
-- [ ] Build + tests green (11/11) ✅
-- [ ] D018-BUG resolved — valid PNG icons in dist/ ✅
-- [ ] Sprint 01 kickoff doc (item #31 in sprint index) — pending CTO
+- [ ] Architecture: `src/shared/` is Chrome-runtime-API-free
+- [ ] `MessageHandler` type matches real `chrome.runtime.onMessage.addListener` signature
+- [ ] `generateBugId()` uses `crypto.randomUUID()`
+- [ ] Test coverage: `generateBugId` uniqueness proven across 100 calls
+- [ ] `dist/icons/*.png` — valid PNG files, Chrome-loadable
+- [ ] Vitest output clean: single-pass `dot` reporter, 11/11 green
+- [ ] `npm run build` + `tsc --noEmit` pass with zero errors
+- [ ] Sprint 01 kickoff — pending CTO
 
 ---
 
-*[DEV:scaffold] — All QA flags resolved. Sprint 00 complete.*
+*`[DEV:scaffold]` — All 7 issues resolved across 2 QA rounds. Sprint 00 complete. Ready for Sprint 01.*
