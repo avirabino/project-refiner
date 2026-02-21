@@ -32,6 +32,7 @@ export interface ChromeResponse<T = unknown> {
  */
 export type MessageHandler<T = unknown> = (
   message: ChromeMessage,
+  sender: chrome.runtime.MessageSender,
   sendResponse: (response: ChromeResponse<T>) => void
 ) => boolean | void;
 

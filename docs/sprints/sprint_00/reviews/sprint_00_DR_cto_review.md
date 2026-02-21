@@ -166,3 +166,96 @@ after:  dist/icons/icon-16.png    0.07 kB  ← valid PNG
 ---
 
 *`[DEV:scaffold]` — Sprint 00 complete. Ready for Sprint 01.*
+
+---
+
+## QA Flag Resolutions (Round 2)
+
+**QA reviewed all 5 fixes — all ✅. Two additional flags raised and implemented:**
+
+### Flag A — MessageHandler type: sender parameter added
+
+**Issue:** MessageHandler<T> was missing sender: chrome.runtime.MessageSender, making it incompatible with the real chrome.runtime.onMessage.addListener signature.
+
+**Before:**
+```typescript
+export type MessageHandler<T = unknown> = (
+  message: ChromeMessage,
+  sendResponse: (response: ChromeResponse<T>) => void
+) => boolean | void;
+```
+
+**After:**
+```typescript
+export type MessageHandler<T = unknown> = (
+  message: ChromeMessage,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response: ChromeResponse<T>) => void
+) => boolean | void;
+```
+
+**Note:** chrome.runtime.MessageSender is a TypeScript type declaration from @types/chrome (devDep) — not a runtime Chrome API call. The Chrome-API-free constraint on src/shared/ refers to runtime calls only. This type is safe in shared/.
+
+---
+
+### Flag B — Vitest double-reporting: fixed via eporter: 'dot'
+
+**Issue:** Each test file appeared twice in 
+px vitest run output (visual artifact, counts were correct).
+
+**Root cause investigation:**
+- Removing globals: true → still doubled
+- Removing /// <reference types="vitest" /> → still doubled  
+- pool: 'forks', singleFork: true → tripled (worse)
+- **Root cause:** Vitest 2.x verbose/default reporters emit incremental updates per worker thread AND a final summary pass, causing files to appear 2-3x.
+
+**Fix:** Changed eporter: 'verbose' → eporter: 'dot'. The dot reporter outputs one dot per passing test, final summary only — no per-file duplication.
+
+**Before:**
+```
+✓ tests/unit/shared/constants.test.ts (5)
+✓ tests/unit/shared/utils.test.ts (6)
+✓ tests/unit/shared/constants.test.ts (5)   ← duplicate
+✓ tests/unit/shared/utils.test.ts (6)        ← duplicate
+```
+
+**After:**
+```
+···········
+
+Test Files  2 passed (2)
+Tests  11 passed (11)
+```
+
+---
+
+## Updated Verification Gates
+
+| Gate | Result |
+|---|---|
+| 
+pm run build | ✅ Clean |
+| 
+px tsc --noEmit | ✅ Zero errors |
+| 
+px eslint src/ | ✅ Zero errors |
+| 
+px vitest run | ✅ 11/11, single-pass output |
+| MessageHandler matches Chrome API signature | ✅ sender param added |
+| src/shared/ — zero Chrome runtime API | ✅ Verified |
+
+---
+
+## Updated CTO Sign-Off Requested
+
+- [ ] Architecture compliance: src/shared/ Chrome-API-free ✅
+- [ ] generateBugId() uses crypto.randomUUID() ✅
+- [ ] MessageHandler type matches real Chrome onMessage signature ✅
+- [ ] Vitest output clean — no double-reporting ✅
+- [ ] Build + tests green (11/11) ✅
+- [ ] D018-BUG resolved — valid PNG icons in dist/ ✅
+- [ ] Sprint 01 kickoff doc (item #31 in sprint index) — pending CTO
+
+---
+
+*[DEV:scaffold] — All QA flags resolved. Sprint 00 complete.*
