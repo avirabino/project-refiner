@@ -107,14 +107,14 @@ QA **cannot start E2E work** until DEV produces a working `dist/` folder. You CA
 
 | Priority | Task ID | What to create | Key detail |
 |---|---|---|---|
-| 1 | Q003 | `tests/fixtures/target-app/` | Minimal multi-page static app. Port 3847. Must have `data-testid` on every interactive element. See QA todo for full element spec |
-| 2 | Q008 | `demos/refine-demo-app/` | "TaskPilot" — React SaaS demo. Port 3900. Login, Dashboard, TaskList, TaskDetail, Settings, 404. See QA todo for full spec |
+| 1 | Q003 | `tests/fixtures/target-app/` | Minimal multi-page static app. Port 38470. Must have `data-testid` on every interactive element. See QA todo for full element spec |
+| 2 | Q008 | `demos/refine-demo-app/` | "TaskPilot" — React SaaS demo. Port 39000. Login, Dashboard, TaskList, TaskDetail, Settings, 404. See QA todo for full spec |
 
 **Start after DEV delivers `dist/` (D018):**
 
 | Priority | Task ID | What to create | Key detail |
 |---|---|---|---|
-| 3 | Q001 | `playwright.config.ts` | Chromium only. `webServer` for target app on 3847. Screenshot on failure |
+| 3 | Q001 | `playwright.config.ts` | Chromium only. `webServer` for target app on 38470. Screenshot on failure |
 | 4 | Q002 | `tests/e2e/fixtures/extension.fixture.ts` | `launchPersistentContext` with `--load-extension=dist/`. Expose `extensionId` |
 | 5 | Q004 | `tests/e2e/extension-loads.spec.ts` | Build → load → popup opens → "Refine" visible |
 | 6 | Q005 | `tests/e2e/content-script-injects.spec.ts` | Navigate to target app → console message visible |
@@ -123,8 +123,8 @@ QA **cannot start E2E work** until DEV produces a working `dist/` folder. You CA
 
 ### QA Definition of Done
 - [ ] `npx playwright test` — all E2E pass (headed mode)
-- [ ] QA target app runs on `localhost:3847`
-- [ ] Demo app runs on `localhost:3900` with all pages functional
+- [ ] QA target app runs on `localhost:38470`
+- [ ] Demo app runs on `localhost:39000` with all pages functional
 - [ ] Extension fixture loads extension successfully
 - [ ] Every test has meaningful assertions
 - [ ] E2E patterns documented in `docs/04_TESTING.md`
@@ -152,10 +152,10 @@ This is what **Avi uses for manual acceptance testing**. It should feel like a r
 
 | Port | App | Owner |
 |---|---|---|
-| 3847 | QA test target app | QA |
-| 3900 | Demo app (TaskPilot) | QA |
+| 38470 | QA test target app | QA |
+| 39000 | Demo app (TaskPilot) | QA |
 | 5173 | Vite dev server (CRXJS HMR) | DEV |
-| 33847 | Papyrus (separate project) | — |
+| 338470 | Papyrus (separate project) | — |
 
 ---
 
@@ -168,8 +168,8 @@ All of these must be true for Avi to sign off:
 3. Content script injects on target app → console log visible
 4. `npx vitest run` → all green, ≥80% shared/ coverage
 5. `npx playwright test` → all E2E green
-6. QA target app live on `localhost:3847`
-7. Demo app live on `localhost:3900` (all pages working)
+6. QA target app live on `localhost:38470`
+7. Demo app live on `localhost:39000` (all pages working)
 8. Avi manually tests extension against demo app → content script visible
 
 ---

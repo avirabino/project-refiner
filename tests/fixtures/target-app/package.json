@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Minimal QA test target app for E2E regression testing.",
   "scripts": {
-    "start": "serve -l 3847"
+    "start": "serve -l 38470",
+    "start:38471": "serve -l 38471",
+    "start:38472": "serve -l 38472"
   },
   "dependencies": {
     "serve": "^14.2.4"

@@ -17,7 +17,7 @@ All Sprint 00 QA deliverables are complete. The E2E testing infrastructure is in
 
 ### ✅ Q003 — QA Test Target App (`tests/fixtures/target-app/`)
 
-- 3-page static HTML app (Home, About, Form) serving on `localhost:3847`
+- 3-page static HTML app (Home, About, Form) serving on `localhost:38470`
 - All interactive elements have `data-testid` attributes as specified
 - Client-side form validation with visible success message
 - Minimal, clean design — suitable for screenshotting in test reports
@@ -35,7 +35,7 @@ All Sprint 00 QA deliverables are complete. The E2E testing infrastructure is in
 
 ### ✅ Q008 — Demo App "TaskPilot" (`demos/refine-demo-app/`)
 
-- Full Vite + React 18 + Tailwind CSS SaaS demo app on `localhost:3900`
+- Full Vite + React 18 + Tailwind CSS SaaS demo app on `localhost:39000`
 - 6 routes: Login, Dashboard, TaskList, TaskDetail, Settings, NotFound
 - 17 seed tasks with realistic data (5 Todo, 7 In Progress, 5 Done, 3 Archived/2 extra)
 - All required interaction types implemented: forms, modals, tables, toasts, theme toggle, sidebar collapse, CRUD, keyboard nav (Tab/Enter/Escape)
@@ -62,7 +62,7 @@ All Sprint 00 QA deliverables are complete. The E2E testing infrastructure is in
 ### ✅ Q001 — `playwright.config.ts`
 
 - Chromium only, `workers: 1`, `fullyParallel: false`
-- `webServer` auto-starts QA target app on port 3847
+- `webServer` auto-starts QA target app on port 38470
 - `screenshot: 'only-on-failure'`, `trace: 'on-first-retry'`
 - `reporter: [['html'], ['list']]`
 - `reuseExistingServer: true` (safe for local dev)
@@ -88,7 +88,7 @@ All Sprint 00 QA deliverables are complete. The E2E testing infrastructure is in
 
 ### ✅ Q005 — E2E: Content Script Injects (`tests/e2e/content-script-injects.spec.ts`)
 
-- Navigates to `localhost:3847`
+- Navigates to `localhost:38470`
 - Collects all console messages
 - Asserts `[Refine] Content script loaded` present
 - Includes descriptive failure message with actual console output
@@ -131,9 +131,9 @@ Added "Playwright Extension E2E Patterns" section covering:
 ## Definition of Done — Status
 
 ```
-✅ QA target app runs on localhost:3847 — all 3 pages functional
+✅ QA target app runs on localhost:38470 — all 3 pages functional
 ✅ Every interactive element in target app has data-testid
-✅ Demo app (TaskPilot) runs on localhost:3900 — all 6 pages functional
+✅ Demo app (TaskPilot) runs on localhost:39000 — all 6 pages functional
 ✅ Demo app login works, tasks CRUD works, theme toggle works
 ✅ Demo app looks like a real SaaS product (not a test stub)
 ✅ playwright.config.ts created with correct extension testing setup

@@ -13,7 +13,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm start',
-    url: 'http://localhost:3847',
+    url: 'http://localhost:38470',
     reuseExistingServer: true,
     cwd: './tests/fixtures/target-app',
     timeout: 15000,

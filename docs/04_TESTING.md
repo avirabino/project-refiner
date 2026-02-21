@@ -102,8 +102,8 @@ export const expect = base.expect;
 ### Test Target App
 
 **Location:** `tests/fixtures/target-app/`
-**Run:** `npx serve tests/fixtures/target-app -l 3847`
-**URL:** `http://localhost:3847`
+**Run:** `npx serve tests/fixtures/target-app -l 38470`
+**URL:** `http://localhost:38470`
 
 A simple multi-page web app used as Refine's test subject. Contains forms, buttons, navigation, and `data-testid` attributes for selector testing.
 
@@ -207,7 +207,7 @@ test('content script injects on target app', async ({ context }) => {
   const page = await context.newPage();
   const consoleMessages: string[] = [];
   page.on('console', msg => consoleMessages.push(msg.text()));
-  await page.goto('http://localhost:3847');
+  await page.goto('http://localhost:38470');
   await page.waitForTimeout(1000);
   expect(consoleMessages.some(m => m.includes('Refine content script loaded'))).toBe(true);
 });
@@ -301,7 +301,7 @@ test('my new E2E test', async ({ context, extensionId }) => {
   await expect(page.locator('[data-testid="my-element"]')).toBeVisible();
 
   // Navigate to target app
-  await page.goto('http://localhost:3847');
+  await page.goto('http://localhost:38470');
   await expect(page.getByTestId('hero-cta')).toBeVisible();
 });
 ```
@@ -334,7 +334,7 @@ test('my new E2E test', async ({ context, extensionId }) => {
 ### QA Test Target App
 
 **Location:** `tests/fixtures/target-app/`
-**Port:** `3847`
+**Port:** `38470`
 **Start:** `npm start` (from that directory) — also auto-started by `playwright.config.ts` webServer
 
 All interactive elements have `data-testid` attributes — use `page.getByTestId()` for selectors.
@@ -342,7 +342,7 @@ All interactive elements have `data-testid` attributes — use `page.getByTestId
 ### Demo App (TaskPilot)
 
 **Location:** `demos/refine-demo-app/`
-**Port:** `3900`
+**Port:** `39000`
 **Start:** `npm run dev` (from that directory)
 
 Used for manual acceptance testing by the Founder. Not wired into automated E2E.

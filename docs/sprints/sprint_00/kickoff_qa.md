@@ -39,12 +39,12 @@ These two apps don't depend on the extension being built. Start here.
 
 A **minimal multi-page static HTML app** used for automated E2E regression testing. This is NOT the demo app — it's a lightweight test stub with predictable, machine-verifiable behavior.
 
-**Serves on:** `http://localhost:3847`
+**Serves on:** `http://localhost:38470`
 **Tech:** Plain HTML + vanilla JS + basic CSS (no framework, no bundler). Use `npx serve` to run.
 
 ```
 tests/fixtures/target-app/
-├── package.json          # { "scripts": { "start": "npx serve -l 3847" } }
+├── package.json          # { "scripts": { "start": "npx serve -l 38470" } }
 ├── index.html            # Home page with nav links
 ├── about.html            # About page (tests navigation recording)
 ├── form.html             # Form page (tests input recording)
@@ -70,7 +70,7 @@ tests/fixtures/target-app/
 | about.html | Back link → Home | `nav-home` | Navigation back |
 
 **Acceptance criteria:**
-- `npx serve tests/fixtures/target-app -l 3847` serves the app
+- `npx serve tests/fixtures/target-app -l 38470` serves the app
 - All 3 pages load and navigate correctly
 - Form submission shows success message (client-side validation, no server)
 - Every interactive element has a `data-testid`
@@ -82,14 +82,14 @@ tests/fixtures/target-app/
 
 A **realistic mini-SaaS application** that the FOUNDER (Avi) uses for manual acceptance testing. Unlike the QA target (minimal stub), this should feel like a real product — polished, multi-page, with realistic data and interactions.
 
-**Serves on:** `http://localhost:3900`
+**Serves on:** `http://localhost:39000`
 **Tech:** Vite + React 18 + Tailwind CSS (same stack as Refine's popup — consistent tooling)
 
 **App concept:** "TaskPilot" — a fictional task management SaaS
 
 ```
 demos/refine-demo-app/
-├── package.json              # Vite + React (port 3900)
+├── package.json              # Vite + React (port 39000)
 ├── index.html                # App shell
 ├── src/
 │   ├── main.tsx              # React 18 createRoot
@@ -112,7 +112,7 @@ demos/refine-demo-app/
 │   └── styles/
 │       └── globals.css       # Tailwind base + any custom styles
 ├── tailwind.config.ts
-├── vite.config.ts            # port: 3900
+├── vite.config.ts            # port: 39000
 └── tsconfig.json
 ```
 
@@ -149,7 +149,7 @@ demos/refine-demo-app/
 - Persists to localStorage
 
 **Acceptance criteria:**
-- `cd demos/refine-demo-app && npm install && npm run dev` → runs on port 3900
+- `cd demos/refine-demo-app && npm install && npm run dev` → runs on port 39000
 - All 6 pages accessible and functional
 - Login works with any credentials
 - Can create, edit, and delete tasks (in-memory, no persistence needed beyond session)
@@ -173,7 +173,7 @@ Team DEV will signal when `npm run build` produces a working `dist/` folder. Onc
 // Key settings:
 // - Chromium only (no Firefox/WebKit — extension testing limitation)
 // - headless: false (extensions require headed mode)
-// - webServer: start QA target app on port 3847
+// - webServer: start QA target app on port 38470
 // - screenshot: 'only-on-failure'
 // - reporter: ['html', 'list']
 // - testDir: 'tests/e2e'
@@ -222,7 +222,7 @@ export const expect = base.expect;
 - Assert popup contains version "0.1.0"
 
 #### Q005: E2E — Content Script Injects (`tests/e2e/content-script-injects.spec.ts`)
-- Navigate to `http://localhost:3847` (QA target app)
+- Navigate to `http://localhost:38470` (QA target app)
 - Listen for console messages
 - Assert console contains `"[Refine] Content script loaded"`
 
@@ -252,10 +252,10 @@ export const expect = base.expect;
 3. **Do NOT touch `src/` code.** You own `tests/`, `demos/`, `playwright.config.ts`, and updating `docs/04_TESTING.md`. Source code is DEV's domain.
 
 4. **Port map — DO NOT USE other ports:**
-   - `3847` = QA target app
-   - `3900` = Demo app (TaskPilot)
+   - `38470` = QA target app
+   - `39000` = Demo app (TaskPilot)
    - `5173` = Vite HMR (DEV's, don't touch)
-   - `33847` = Papyrus (separate project, avoid)
+   - `338470` = Papyrus (separate project, avoid)
 
 5. **`data-testid` on EVERYTHING interactive** in the QA target app. This is how Refine's selector engine will prioritize selectors — `data-testid` > `aria-label` > `id` > CSS.
 
@@ -283,9 +283,9 @@ export const expect = base.expect;
 All of these must be true before you report "done":
 
 ```
-✅ QA target app runs on localhost:3847 — all 3 pages functional
+✅ QA target app runs on localhost:38470 — all 3 pages functional
 ✅ Every interactive element in target app has data-testid
-✅ Demo app (TaskPilot) runs on localhost:3900 — all 6 pages functional
+✅ Demo app (TaskPilot) runs on localhost:39000 — all 6 pages functional
 ✅ Demo app login works, tasks CRUD works, theme toggle works
 ✅ Demo app looks like a real SaaS product (not a test stub)
 ✅ playwright.config.ts created with correct extension testing setup

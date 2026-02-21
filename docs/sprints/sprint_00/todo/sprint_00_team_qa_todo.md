@@ -17,9 +17,9 @@
 
 | ID | Task | Acceptance criteria | Files | Status |
 |---|---|---|---|---|
-| Q001 | Create `playwright.config.ts` | Chromium only. Extension loading via `launchPersistentContext`. `dist/` as extension path. Screenshot on failure. Reporter: html. `webServer` for target app on port 3847 | `playwright.config.ts` | Done |
+| Q001 | Create `playwright.config.ts` | Chromium only. Extension loading via `launchPersistentContext`. `dist/` as extension path. Screenshot on failure. Reporter: html. `webServer` for target app on port 38470 | `playwright.config.ts` | Done |
 | Q002 | Create E2E extension fixture | Playwright fixture: build extension, launch persistent context with extension loaded, expose `extensionId` and `context` | `tests/e2e/fixtures/extension.fixture.ts` | Done |
-| Q003 | Create QA test target app | Simple static HTML/JS app: nav links, forms, buttons with `data-testid`, list view. Serve on `localhost:3847` | `tests/fixtures/target-app/*` | Done |
+| Q003 | Create QA test target app | Simple static HTML/JS app: nav links, forms, buttons with `data-testid`, list view. Serve on `localhost:38470` | `tests/fixtures/target-app/*` | Done |
 | Q004 | E2E: Extension loads | Build → launch Chromium with extension → popup opens → contains "Refine" text | `tests/e2e/extension-loads.spec.ts` | Done |
 | Q005 | E2E: Content script injects | Navigate to target app → verify console message from content script | `tests/e2e/content-script-injects.spec.ts` | Done |
 | Q006 | E2E: Navigate target app | Navigate between pages on target app → verify extension stays loaded across navigations | `tests/e2e/target-app-navigation.spec.ts` | Done |
@@ -31,7 +31,7 @@ The QA test target is a **minimal multi-page static app** for automated E2E regr
 
 ```
 tests/fixtures/target-app/
-├── package.json          # { "scripts": { "start": "npx serve -l 3847" } }
+├── package.json          # { "scripts": { "start": "npx serve -l 38470" } }
 ├── index.html            # Home page with nav links
 ├── about.html            # About page (test navigation recording)
 ├── form.html             # Form page (test input recording)
@@ -90,7 +90,7 @@ export const expect = base.expect;
 
 | ID | Task | Acceptance criteria | Files | Status |
 |---|---|---|---|---|
-| Q008 | Create Refine Demo App | Rich multi-page app for Avi's manual testing. Runs on `localhost:3900`. Covers all interaction types Refine will record. See spec below. | `demos/refine-demo-app/*` | Done |
+| Q008 | Create Refine Demo App | Rich multi-page app for Avi's manual testing. Runs on `localhost:39000`. Covers all interaction types Refine will record. See spec below. | `demos/refine-demo-app/*` | Done |
 
 ### Demo App Specification
 
@@ -100,7 +100,7 @@ The demo app is a **realistic mini-SaaS** that exercises every interaction type 
 
 ```
 demos/refine-demo-app/
-├── package.json              # Vite + React (port 3900)
+├── package.json              # Vite + React (port 39000)
 ├── index.html                # App shell
 ├── src/
 │   ├── main.tsx              # React mount
@@ -123,7 +123,7 @@ demos/refine-demo-app/
 │   └── styles/
 │       └── globals.css       # Tailwind + custom styles
 ├── tailwind.config.ts
-├── vite.config.ts            # port: 3900
+├── vite.config.ts            # port: 39000
 └── tsconfig.json
 ```
 
@@ -142,15 +142,15 @@ demos/refine-demo-app/
 
 **Why this matters:** This gives Avi a realistic, hands-on environment to validate that Refine properly records real-world user interactions, not just synthetic test clicks.
 
-**Port:** `localhost:3900` (separate from QA target on 3847 and Papyrus on 33847)
+**Port:** `localhost:39000` (separate from QA target on 38470 and Papyrus on 338470)
 
 ---
 
 ## Definition of Done (QA)
 
 - `npx playwright test` — all E2E tests pass (headed mode)
-- QA test target app runs on `localhost:3847`
-- Demo app runs on `localhost:3900` with all pages functional
+- QA test target app runs on `localhost:38470`
+- Demo app runs on `localhost:39000` with all pages functional
 - Extension fixture successfully loads extension in Chromium
 - Every E2E test has clear assertions (not just "doesn't crash")
 - E2E patterns documented in `docs/04_TESTING.md`

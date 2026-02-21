@@ -8,7 +8,7 @@ test('content script injects on QA target app and logs to console', async ({ con
     consoleMessages.push(msg.text());
   });
 
-  await page.goto('http://localhost:3847');
+  await page.goto('http://localhost:38470');
   await page.waitForTimeout(1500);
 
   const injected = consoleMessages.some(m => m.includes('[Refine] Content script loaded'));

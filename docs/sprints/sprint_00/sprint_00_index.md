@@ -77,11 +77,11 @@ Deliver a **complete, buildable, testable** Chrome Extension scaffold:
 |---|----------|-------|--------|
 | 20 | `playwright.config.ts` — E2E config for extension testing | QA | ☑ Done |
 | 21 | `tests/e2e/fixtures/extension.fixture.ts` — extension test fixture | QA | ☑ Done |
-| 22 | `tests/fixtures/target-app/` — QA regression target (port 3847) | QA | ☑ Done |
+| 22 | `tests/fixtures/target-app/` — QA regression target (port 38470) | QA | ☑ Done |
 | 23 | `tests/e2e/extension-loads.spec.ts` — extension load smoke test | QA | ☑ Done |
 | 24 | `tests/e2e/content-script-injects.spec.ts` — content script E2E | QA | ☑ Done |
 | 25 | `tests/e2e/target-app-navigation.spec.ts` — navigation E2E | QA | ☑ Done |
-| 26 | `demos/refine-demo-app/` — Avi's manual acceptance demo app (port 3900) | QA | ☑ Done |
+| 26 | `demos/refine-demo-app/` — Avi's manual acceptance demo app (port 39000) | QA | ☑ Done |
 | 27 | `npx playwright test` — all E2E pass | QA | ⏳ Ready (requires headed Chrome) |
 
 ### Phase 5: CI + Docs (CTO / QA)
@@ -90,7 +90,7 @@ Deliver a **complete, buildable, testable** Chrome Extension scaffold:
 | 28 | `.github/workflows/ci.yml` — adapted for extension | CTO | ☑ Done |
 | 29 | `docs/04_TESTING.md` — updated with E2E patterns | QA | ☑ Done |
 | 30 | `docs/0l_DECISIONS.md` — ADR-008 status updated | CTO | ☑ Done |
-| 31 | Sprint-01 plan drafted | CTO | ☐ |
+| 31 | Sprint-01 + Sprint-02 plans drafted | CTO | ☑ Done |
 
 ### Phase 6: Acceptance (FOUNDER)
 | # | Artifact | Status |
@@ -100,8 +100,8 @@ Deliver a **complete, buildable, testable** Chrome Extension scaffold:
 | 34 | Content script injects on QA target app | ☑ Ready (load `dist/` unpacked) |
 | 35 | `npx vitest run` — all pass | ☑ Done (11/11) |
 | 36 | `npx playwright test` — extension E2E pass | ⏳ Ready (requires headed Chrome) |
-| 37 | QA target app accessible at `http://localhost:3847` | ☑ Ready (`npm start` in target-app) |
-| 38 | Demo app accessible at `http://localhost:3900` | ☑ Done (`npm run dev` running) |
+| 37 | QA target app accessible at `http://localhost:38470` | ☑ Ready (`npm start` in target-app) |
+| 38 | Demo app accessible at `http://localhost:39000` | ☑ Done (`npm run dev` running) |
 | 39 | Avi manual test via demo app — extension loads, popup opens, content script visible | ⏳ Awaiting Founder |
 | 40 | Avi sign-off | ⏳ Awaiting Founder |
 
@@ -164,6 +164,6 @@ Deliver a **complete, buildable, testable** Chrome Extension scaffold:
 ## Open Questions (For FOUNDER)
 
 1. ~~**ADR-008: Playwright for E2E**~~ — **DECIDED: Approved** (2026-02-20)
-2. ~~**Test target app port**~~ — **DECIDED: `localhost:3847`** (avoids collision with Papyrus 33847)
+2. ~~**Test target app port**~~ — **DECIDED: `localhost:38470`** (avoids collision with Papyrus 338470)
 3. **Extension icon** — Use SynaptixLabs brand colors (orange #F97316 + blue #3B82F6)? → Sprint 01 polish
 4. ~~**Product name**~~ — **DECIDED: "Refine"** (SynaptixLabs Refine). Repo: `project-refiner`.

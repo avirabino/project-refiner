@@ -43,7 +43,7 @@ Refine (Acceptance Test Recorder) is a Chrome Extension built on Manifest V3 tha
          â”‚            â”‚  ANY Target Web App  â”‚             â”‚
          â”‚            â”‚  (no modifications)  â”‚             â”‚
          â”‚            â”‚                      â”‚             â”‚
-         â”‚            â”‚  localhost:33847      â”‚             â”‚
+         â”‚            â”‚  localhost:338470      â”‚             â”‚
          â”‚            â”‚  localhost:3000       â”‚             â”‚
          â”‚            â”‚  app.example.com      â”‚             â”‚
          â”‚            â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜             â”‚
@@ -425,7 +425,7 @@ npm run build
 # 3. Click "Load unpacked" â†’ select dist/ folder
 # 4. Navigate to target app â†’ click extension icon
 
-# Run E2E tests (requires built dist/ + target app on port 3847)
+# Run E2E tests (requires built dist/ + target app on port 38470)
 npx playwright test
 ```
 

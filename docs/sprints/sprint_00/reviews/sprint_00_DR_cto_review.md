@@ -94,11 +94,11 @@ Deliver a **complete, buildable, testable** Chrome Extension scaffold:
 
 | # | Artifact | Status |
 |---|---|---|
-| Q001 | `playwright.config.ts` — Chromium only, `launchPersistentContext`, webServer port 3847 | ☑ Done |
+| Q001 | `playwright.config.ts` — Chromium only, `launchPersistentContext`, webServer port 38470 | ☑ Done |
 | Q002 | `tests/e2e/fixtures/extension.fixture.ts` — dynamic extensionId, no hardcoded IDs | ☑ Done |
 | Q007 | `docs/04_TESTING.md` — E2E patterns, fixture code, common pitfalls | ☑ Done |
 
-### 5.2 QA Test Target App (`tests/fixtures/target-app/`, port 3847)
+### 5.2 QA Test Target App (`tests/fixtures/target-app/`, port 38470)
 
 Minimal 3-page static app for automated E2E regression:
 
@@ -120,7 +120,7 @@ Start: `npm start` in `tests/fixtures/target-app/`
 
 > **Note:** E2E specs require headed Chrome. `npx playwright test` is marked ⏳ — passes once extension is loaded unpacked in Chrome. CI uses `xvfb-run`.
 
-### 5.4 Demo App — "TaskPilot" (`demos/refine-demo-app/`, port 3900)
+### 5.4 Demo App — "TaskPilot" (`demos/refine-demo-app/`, port 39000)
 
 Realistic mini-SaaS for FOUNDER manual acceptance. Built with Vite + React 18 + Tailwind CSS.
 
@@ -360,8 +360,8 @@ Test Files  2 passed (2) | Tests  11 passed (11)
 **QA Infrastructure**
 - [ ] Playwright fixture loads extension via persistent context
 - [ ] 3 E2E smoke specs written with meaningful assertions
-- [ ] QA target app serves on `localhost:3847` with `data-testid` selectors
-- [ ] Demo app "TaskPilot" serves on `localhost:3900` — 6 routes, full CRUD
+- [ ] QA target app serves on `localhost:38470` with `data-testid` selectors
+- [ ] Demo app "TaskPilot" serves on `localhost:39000` — 6 routes, full CRUD
 
 **Docs & CI**
 - [ ] `docs/04_TESTING.md` updated with E2E patterns + pitfalls

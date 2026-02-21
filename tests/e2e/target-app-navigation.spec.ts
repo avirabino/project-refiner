@@ -9,9 +9,9 @@ test('extension stays active across target app page navigations', async ({ conte
   });
 
   // Home page
-  await page.goto('http://localhost:3847');
+  await page.goto('http://localhost:38470');
   await page.waitForLoadState('networkidle');
-  await expect(page).toHaveURL(/localhost:3847/);
+  await expect(page).toHaveURL(/localhost:38470/);
   await expect(page.getByTestId('hero-cta')).toBeVisible();
 
   // Navigate to About
@@ -29,7 +29,7 @@ test('extension stays active across target app page navigations', async ({ conte
   // Navigate back to Home
   await page.getByTestId('nav-home').click();
   await page.waitForLoadState('networkidle');
-  await expect(page).toHaveURL(/localhost:3847/);
+  await expect(page).toHaveURL(/localhost:38470/);
 
   // Verify no extension errors in console (no "[Refine] ERROR" messages)
   const extensionErrors = consoleMessages.filter(m => m.includes('[Refine] ERROR'));
