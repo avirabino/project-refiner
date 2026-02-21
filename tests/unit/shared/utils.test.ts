@@ -23,32 +23,23 @@ describe('Shared Utils', () => {
 
   describe('formatTimestamp', () => {
     it('should format epoch timestamp into readable string', () => {
-      // Using a fixed timezone could cause test flakiness across environments,
-      // so we use the local timezone equivalent of a known date.
-      const testDate = new Date(2026, 1, 21, 14, 30, 45); // Feb 21, 2026 14:30:45 local time
+      const testDate = new Date(2026, 1, 21, 14, 30, 45);
       const timestamp = testDate.getTime();
-      
       const formatted = formatTimestamp(timestamp);
       expect(formatted).toBe('2026-02-21 14:30:45');
     });
   });
 
   describe('generateBugId', () => {
-    it('should generate an ID with the bug- prefix', () => {
+    it('should generate an ID with bug- prefix and 8-char hex segment', () => {
       const id = generateBugId();
-      expect(id).toMatch(/^bug-[a-z0-9]{5}$/);
+      expect(id).toMatch(/^bug-[0-9a-f]{8}$/);
     });
 
-    it('should generate unique IDs', () => {
+    it('should generate unique IDs across 100 calls', () => {
       const ids = new Set<string>();
-      const count = 100;
-      
-      for (let i = 0; i < count; i++) {
-        ids.add(generateBugId());
-      }
-      
-      // The chance of collision in 100 random 5-char base36 strings is negligible
-      expect(ids.size).toBe(count);
+      for (let i = 0; i < 100; i++) ids.add(generateBugId());
+      expect(ids.size).toBe(100);
     });
   });
 });

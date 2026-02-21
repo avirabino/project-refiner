@@ -51,6 +51,7 @@
 | ID | Task | Acceptance criteria | Files | Status |
 |---|---|---|---|---|
 | D018 | Verify full build + load | `npm run build` → load in Chrome → popup works → content script injects → service worker runs | All | ☑ Done |
+| D018-BUG | **[QA FLAG → FIXED]** Icon files were 0-byte | Added valid 1×1 PNG placeholders to `public/icons/`. Build now copies 0.07kB files. Chrome shows default icon (cosmetic — Sprint 01 to add branded icons). | `public/icons/*.png` | ☑ Fixed |
 | D019 | Verify all unit tests pass | `npx vitest run` → green. Coverage ≥ 80% for `src/shared/` | All | ☑ Done |
 
 ## Dependency install list
@@ -119,3 +120,4 @@ tests/unit/
 - CRXJS + Vite 6 compatibility — fallback to Vite 5.4.x if needed
 - rrweb v2 + bundler compatibility — may need specific import config
 - Shadow DOM React mounting — verify works in content script context
+

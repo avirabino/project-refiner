@@ -1,6 +1,8 @@
 /**
  * @file messages.ts
- * @description Types and helpers for Chrome Extension messaging protocol.
+ * @description Types for Chrome Extension messaging protocol.
+ * Note: Chrome API implementations (sendMessage, onMessage) live in
+ * src/background/ and src/content/ — shared/ must remain Chrome-API-free.
  */
 
 import { MessageType } from './types';
@@ -24,37 +26,15 @@ export interface ChromeResponse<T = unknown> {
 }
 
 /**
- * Type-safe wrapper around chrome.runtime.sendMessage.
- * Sends a message from one execution context to another (e.g., popup to background).
- *
- * @param message The message to send
- * @returns Promise resolving to the expected response type
+ * Type for a message handler function.
+ * Concrete implementations live in src/background/ or src/content/ —
+ * not in shared/, which must remain Chrome-API-free.
  */
-export const sendMessage = async <TResponse = unknown>(
-  message: ChromeMessage
-): Promise<ChromeResponse<TResponse>> => {
-  try {
-    const response = await chrome.runtime.sendMessage(message);
-    return response as ChromeResponse<TResponse>;
-  } catch (error) {
-    console.error(`[Refine] Error sending message ${message.type}:`, error);
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-};
+export type MessageHandler<T = unknown> = (
+  message: ChromeMessage,
+  sendResponse: (response: ChromeResponse<T>) => void
+) => boolean | void;
 
-/**
- * Helper to handle incoming messages in background or content scripts.
- * Maps to chrome.runtime.onMessage.addListener.
- */
-export const onMessage = (
-  handler: (
-    message: ChromeMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response: ChromeResponse) => void
-  ) => boolean | void
-) => {
-  chrome.runtime.onMessage.addListener(handler);
-};
+// TODO (Sprint 01): sendMessage() and onMessage() helper implementations
+// move to src/background/messaging.ts and src/content/messaging.ts
+// respectively, where chrome.runtime is in scope.

@@ -36,11 +36,10 @@ export const formatTimestamp = (timestamp: number): string => {
 };
 
 /**
- * Generates a unique Bug ID (bug-XXXXX).
- * Uses a random alphanumeric string for the XXXXX part.
+ * Generates a unique Bug ID using crypto.randomUUID().
+ * Format: bug-XXXXXXXX (first segment of a UUID v4).
  * @returns Unique bug ID
  */
 export const generateBugId = (): string => {
-  const randomChars = Math.random().toString(36).substring(2, 7);
-  return `bug-${randomChars}`;
+  return `bug-${crypto.randomUUID().split('-')[0]}`;
 };
