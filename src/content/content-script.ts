@@ -15,6 +15,24 @@ import { mountOverlay, unmountOverlay } from './overlay/mount';
 
 console.log(`[Refine] Content script loaded on: ${window.location.href}`);
 
+// ── On-load: resume recording if a session is already active ─────────────────
+
+chrome.runtime.sendMessage(
+  { type: 'GET_SESSION_STATUS', source: 'content' },
+  (response) => {
+    if (chrome.runtime.lastError) return;
+    if (response?.ok && response.data?.isRecording && response.data?.sessionId) {
+      startRecording(response.data.sessionId as string);
+      mountOverlay(response.data.sessionId as string);
+      chrome.runtime.sendMessage({
+        type: 'SESSION_STATUS_UPDATE',
+        payload: { url: window.location.href },
+        source: 'content',
+      });
+    }
+  }
+);
+
 // ── Message listener (commands from background) ───────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

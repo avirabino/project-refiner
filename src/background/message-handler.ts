@@ -128,6 +128,18 @@ export function handleMessage(
       return true;
     }
 
+    case MessageType.GET_SESSION_STATUS: {
+      sendResponse({
+        ok: true,
+        data: {
+          sessionId: sessionManager.getActiveSessionId(),
+          status: sessionManager.getStatus(),
+          isRecording: sessionManager.isRecording(),
+        },
+      });
+      return false;
+    }
+
     case MessageType.SESSION_STATUS_UPDATE: {
       const { url } = message.payload as { url: string };
       if (url) sessionManager.addPage(url);
