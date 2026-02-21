@@ -122,16 +122,19 @@ No export, no reports, no replay. Just **capture everything, lose nothing**.
 ## Dependency Map
 
 ```
-Phase 1 (storage + messaging)
-   ├──► Phase 2 (recorder) ──► Phase 3 (overlay UI)
-   │                                     │
-   └──► Phase 4 (popup + screenshot) ────┘
-                                          │
-                                     Phase 5 (tests)
+Phase 1 (infra)
+   ├──► Phase 2 (session lifecycle / popup)
+   ├──► Phase 3 (recording engine)  ──► Phase 4 (overlay + capture)
+   │                                              │
+   └──────────────────────────────────────────────┘
+                                                   │
+                                              Phase 5 (unit + integration tests)
+                                                   │
+                                              Phase 6 (verification)
 ```
 
-DEV runs Phase 1 → Phase 2 + Phase 4 in parallel → Phase 3 → Phase 5 (unit/integration).
-QA starts Phase 5 E2E once Phase 3 + 4 are done.
+DEV runs Phase 1 → Phase 2 + Phase 3 in parallel → Phase 4 → Phase 5 → Phase 6.
+QA starts E2E (Q101-Q105) once Phase 4 is done.
 
 ---
 

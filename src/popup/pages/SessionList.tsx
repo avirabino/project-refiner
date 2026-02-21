@@ -67,6 +67,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
         </div>
         <button
           onClick={onNewSession}
+          data-testid="btn-new-session"
           className="flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-full transition-colors"
         >
           + New Session
@@ -90,6 +91,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
             </p>
             <button
               onClick={onNewSession}
+              data-testid="btn-new-session"
               className="mt-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-full transition-colors"
             >
               + New Session
@@ -137,6 +139,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
 
   return (
     <div
+      data-testid="session-list-item"
       className={`rounded-xl border p-3 ${
         isActive
           ? 'border-indigo-700/60 bg-indigo-900/20'
@@ -151,6 +154,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
           </p>
         </div>
         <span
+          data-testid="recording-status"
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
             STATUS_COLORS[session.status]
           }`}

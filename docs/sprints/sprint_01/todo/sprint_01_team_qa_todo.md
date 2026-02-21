@@ -2,7 +2,7 @@
 
 **Owner:** `[QA]`
 **Sprint:** 01
-**Depends on:** DEV Phase 3 + Phase 4 (control bar + popup wired)
+**Depends on:** DEV Phase 4 complete (recording engine + control bar + capture all functional)
 **Budget:** ~10V (QA share)
 
 ---

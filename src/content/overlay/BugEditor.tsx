@@ -73,7 +73,7 @@ const BugEditor: React.FC<BugEditorProps> = ({
   };
 
   return (
-    <div className="refine-bug-editor">
+    <div className="refine-bug-editor" data-testid="refine-bug-editor">
       <h3>{entryType === 'bug' ? '🐛 Log Bug' : '✨ Log Feature'}</h3>
 
       <div className="refine-type-toggle">
@@ -135,6 +135,7 @@ const BugEditor: React.FC<BugEditorProps> = ({
           placeholder={entryType === 'bug' ? 'Describe the bug…' : 'Describe the feature…'}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          data-testid="bug-editor-title"
           autoFocus
         />
       </div>
@@ -155,6 +156,7 @@ const BugEditor: React.FC<BugEditorProps> = ({
           className="refine-btn--save"
           onClick={handleSave}
           disabled={!title.trim() || saving}
+          data-testid="btn-save-bug"
         >
           {saving ? 'Saving…' : 'Save'}
         </button>

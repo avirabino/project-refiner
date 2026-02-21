@@ -31,44 +31,90 @@ FOUNDER records a session → stops → generates JSON + Markdown report → wat
 
 ## Phase Plan
 
+> **Canonical detail:** `todo/sprint_02_team_dev_todo.md` (DEV) and `todo/sprint_02_team_qa_todo.md` (QA).
+> IDs below match the canonical todos exactly.
+
 ### Phase 1 — Report Generation (DEV) ~13V
 
 | # | Task | File(s) | V |
 |---|---|---|---|
-| D201 | Report generator (Session → JSON + Markdown) | `src/core/report-generator.ts` | 5 |
-| D202 | Replay bundler (rrweb events → self-contained HTML with rrweb-player) | `src/core/replay-bundler.ts` | 5 |
-| D203 | Session detail view in popup (report + actions timeline) | `src/popup/pages/SessionDetail.tsx` | 3 |
+| D201 | JSON report generator | `src/core/report-generator.ts` | 5 |
+| D202 | Markdown report generator | `src/core/report-generator.ts` | 3 |
+| D203 | Auto-generate report on session stop | `src/background/session-manager.ts` | 2 |
 
-### Phase 2 — Playwright Codegen (DEV) ~15V
-
-| # | Task | File(s) | V |
-|---|---|---|---|
-| D204 | Playwright codegen (Action[] → `.spec.ts` string) | `src/core/playwright-codegen.ts` | 10 |
-| D205 | ZIP bundler (replay.html + report.json + report.md + screenshots/ + regression.spec.ts) | `src/core/zip-bundler.ts` | 5 |
-
-### Phase 3 — Popup Export UI + Session Mgmt (DEV) ~8V
+### Phase 2 — Session Management — R007 (DEV) ~5V
 
 | # | Task | File(s) | V |
 |---|---|---|---|
-| D206 | Export buttons in SessionDetail (Report / Replay / Playwright / ZIP) | `src/popup/pages/SessionDetail.tsx` | 2 |
-| D207 | Session delete with confirmation | `src/popup/pages/SessionList.tsx` | 2 |
-| D208 | Keyboard shortcuts (Ctrl+Shift+R/S/B) | `src/background/shortcuts.ts` + `manifest.json` commands | 2 |
-| D209 | Polish pass: loading states, error toasts, empty states | Various popup components | 2 |
+| D204 | Enhanced session list (counts, badges) | `src/popup/pages/SessionList.tsx` | 1 |
+| D205 | Session detail view (metadata + export buttons) | `src/popup/pages/SessionDetail.tsx` | 3 |
+| D206 | Session delete with confirmation | `src/popup/pages/SessionDetail.tsx` | 1 |
+| D207 | Storage usage indicator | `src/popup/components/StorageIndicator.tsx` | 1 |
 
-### Phase 4 — Tests (DEV + QA) ~10V
+### Phase 3 — Visual Replay — R010 (DEV) ~10V
 
-| # | Task | File(s) | Owner | V |
-|---|---|---|---|---|
-| D210 | Unit: report-generator (JSON + MD output) | `tests/unit/core/report-generator.test.ts` | DEV | 2 |
-| D211 | Unit: playwright-codegen (Action → spec.ts) | `tests/unit/core/playwright-codegen.test.ts` | DEV | 3 |
-| D212 | Unit: replay-bundler (HTML output contains rrweb-player) | `tests/unit/core/replay-bundler.test.ts` | DEV | 1 |
-| Q201 | E2E: Generate report after session → verify download | `tests/e2e/report-export.spec.ts` | QA | 1 |
-| Q202 | E2E: Watch replay opens valid HTML | `tests/e2e/replay-viewer.spec.ts` | QA | 1 |
-| Q203 | E2E: Export Playwright → file is syntactically valid TS | `tests/e2e/playwright-export.spec.ts` | QA | 2 |
-| Q204 | E2E: Download ZIP → contains all expected files | `tests/e2e/zip-export.spec.ts` | QA | 1 |
-| Q205 | E2E: Delete session → removed from list + DB | `tests/e2e/session-delete.spec.ts` | QA | 1 |
-| Q206 | E2E: Keyboard shortcuts trigger correct actions | `tests/e2e/keyboard-shortcuts.spec.ts` | QA | 1 |
-| Q207 | Regression: Full Sprint 00 + 01 + 02 suite green | All specs | QA | 0 |
+| # | Task | File(s) | V |
+|---|---|---|---|
+| D208 | Replay bundler (rrweb events → self-contained HTML) | `src/core/replay-bundler.ts` | 5 |
+| D209 | Replay HTML template (branded, controls, timeline markers) | `src/core/replay-bundler.ts` | 3 |
+| D210 | "Watch Replay" download button | `src/popup/pages/SessionDetail.tsx` | 2 |
+
+### Phase 4 — Playwright Codegen — R011 (DEV) ~15V
+
+| # | Task | File(s) | V |
+|---|---|---|---|
+| D211 | Playwright codegen (Action[] → .spec.ts) | `src/core/playwright-codegen.ts` | 10 |
+| D212 | Action → Playwright mapping (goto/click/fill) | `src/core/playwright-codegen.ts` | — |
+| D213 | Smart selector in export (confidence → TODO comments) | `src/core/playwright-codegen.ts` | — |
+| D214 | Bug markers in spec (`// BUG:` comments) | `src/core/playwright-codegen.ts` | — |
+| D215 | "Export Playwright" download button | `src/popup/pages/SessionDetail.tsx` | 2 |
+
+### Phase 5 — ZIP Bundle — R012 (DEV) ~5V
+
+| # | Task | File(s) | V |
+|---|---|---|---|
+| D216 | ZIP assembly (JSZip, all artifacts) | `src/core/zip-exporter.ts` | 3 |
+| D217 | "Export ZIP" download button | `src/popup/pages/SessionDetail.tsx` | 1 |
+| D218 | Screenshot filename mapping in ZIP | `src/core/zip-exporter.ts` | 1 |
+
+### Phase 6 — Keyboard Shortcuts — R013 (DEV) ~3V
+
+| # | Task | File(s) | V |
+|---|---|---|---|
+| D219 | Register chrome.commands in manifest | `manifest.json` | 1 |
+| D220 | Command handler in background | `src/background/shortcuts.ts` | 1 |
+| D221 | Shortcut hints on control bar tooltips | `src/content/overlay/ControlBar.tsx` | 1 |
+
+### Phase 7 — Unit + Integration Tests (DEV) ~6V
+
+| # | Task | File(s) | V |
+|---|---|---|---|
+| D222 | Unit: report-generator | `tests/unit/core/report-generator.test.ts` | 2 |
+| D223 | Unit: playwright-codegen | `tests/unit/core/playwright-codegen.test.ts` | 3 |
+| D224 | Unit: replay-bundler | `tests/unit/core/replay-bundler.test.ts` | 1 |
+| D225 | Integration: export pipeline | `tests/integration/export-pipeline.test.ts` | 2 |
+| D226 | All tests green (Sprint 00-02) | — | 0 |
+
+### Phase 8 — Verification (DEV)
+
+| # | Task | V |
+|---|---|---|
+| D227 | `npm run build` — clean | 0 |
+| D228 | `npx tsc --noEmit` — clean | 0 |
+| D229 | `npx eslint src/` — clean | 0 |
+| D230 | Full manual test on TaskPilot (5-min session, all exports) | 0 |
+
+### QA — E2E Specs (~10V, after DEV Phase 5)
+
+| # | Task | File(s) | V |
+|---|---|---|---|
+| Q201 | E2E: Report export (download JSON/MD) | `tests/e2e/report-export.spec.ts` | 1 |
+| Q202 | E2E: Replay viewer (opens, plays) | `tests/e2e/replay-viewer.spec.ts` | 1 |
+| Q203 | E2E: Playwright export (valid .spec.ts) | `tests/e2e/playwright-export.spec.ts` | 2 |
+| Q204 | E2E: ZIP export (all files present) | `tests/e2e/zip-export.spec.ts` | 1 |
+| Q205 | E2E: Session delete (cascading) | `tests/e2e/session-delete.spec.ts` | 1 |
+| Q206 | E2E: Keyboard shortcuts | `tests/e2e/keyboard-shortcuts.spec.ts` | 1 |
+| Q207 | Full regression: Sprint 00+01+02 suite | All specs | 0 |
 
 ---
 
@@ -87,13 +133,18 @@ FOUNDER records a session → stops → generates JSON + Markdown report → wat
 ## Dependency Map
 
 ```
-Phase 1 (reports + replay) ──► Phase 3 (popup export UI)
-Phase 2 (codegen + ZIP)    ──┘          │
-                                    Phase 4 (tests)
+Phase 1 (reports)    ──► Phase 2 (session mgmt) ──► Phase 5 (ZIP needs all generators)
+Phase 3 (replay)     ──┘                             │
+Phase 4 (codegen)    ──┘                             ▼
+                                                 Phase 6 (shortcuts — independent)
+                                                     │
+                                                 Phase 7 (tests)
+                                                     │
+                                                 Phase 8 (verification)
 ```
 
-DEV runs Phase 1 + Phase 2 in parallel → Phase 3 → Phase 4 (unit).
-QA starts Phase 4 E2E once Phase 3 is done.
+DEV runs Phase 1 + 3 + 4 in parallel → Phase 2 + 5 → Phase 6 → Phase 7 → Phase 8.
+QA starts E2E once Phase 5 is done.
 
 ---
 

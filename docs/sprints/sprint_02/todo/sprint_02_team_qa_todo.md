@@ -2,7 +2,7 @@
 
 **Owner:** `[QA]`
 **Sprint:** 02 (FINAL)
-**Depends on:** DEV Phase 3 (export UI wired)
+**Depends on:** DEV Phase 5 (ZIP export wired — all generators done). Q206 (shortcuts) waits for Phase 6.
 **Budget:** ~10V (QA share)
 
 ---

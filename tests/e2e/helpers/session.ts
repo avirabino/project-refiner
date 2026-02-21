@@ -56,7 +56,7 @@ export async function openTargetApp(
   path: string = ''
 ): Promise<Page> {
   const page = await context.newPage();
-  await page.goto(`http://localhost:3847${path}`);
+  await page.goto(`http://localhost:38470${path}`);
   await page.waitForLoadState('networkidle');
   return page;
 }

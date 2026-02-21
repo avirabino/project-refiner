@@ -80,6 +80,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Login flow QA pass"
+            data-testid="input-session-name"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
             autoFocus
             required
@@ -117,6 +118,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
         <button
           type="submit"
           disabled={!name.trim() || loading}
+          data-testid="btn-start-recording"
           className="mt-auto w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
         >
           {loading ? 'Starting…' : '▶ Start Recording'}

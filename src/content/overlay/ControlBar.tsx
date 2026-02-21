@@ -97,10 +97,15 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName }) => {
         />
       )}
 
-      <div className="refine-control-bar">
-        <div
-          className={`refine-recording-dot ${recordingState === 'paused' ? 'refine-recording-dot--paused' : ''}`}
-        />
+      <div className="refine-control-bar" data-testid="refine-control-bar">
+        <div className="flex items-center gap-1.5" data-testid="recording-indicator">
+          <div
+            className={`refine-recording-dot ${recordingState === 'paused' ? 'refine-recording-dot--paused' : ''}`}
+          />
+          <span className={`refine-status-badge ${recordingState === 'recording' ? 'refine-status-badge--recording' : 'refine-status-badge--paused'}`}>
+            {recordingState === 'recording' ? 'RECORDING' : 'PAUSED'}
+          </span>
+        </div>
 
         <span className="refine-session-name" title={sessionName}>
           {sessionName}
@@ -110,17 +115,31 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName }) => {
 
         <div className="refine-divider" />
 
-        <button
-          className="refine-btn"
-          title={recordingState === 'recording' ? 'Pause' : 'Resume'}
-          onClick={handlePauseResume}
-        >
-          {recordingState === 'recording' ? '⏸' : '▶'}
-        </button>
+        {recordingState === 'recording' && (
+          <button
+            className="refine-btn"
+            title="Pause"
+            data-testid="btn-pause"
+            onClick={handlePauseResume}
+          >
+            ⏸
+          </button>
+        )}
+        {recordingState === 'paused' && (
+          <button
+            className="refine-btn"
+            title="Resume"
+            data-testid="btn-resume"
+            onClick={handlePauseResume}
+          >
+            ▶
+          </button>
+        )}
 
         <button
           className="refine-btn refine-btn--danger"
           title="Stop recording"
+          data-testid="btn-stop"
           onClick={handleStop}
         >
           ⏹
@@ -129,6 +148,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName }) => {
         <button
           className="refine-btn"
           title="Take screenshot"
+          data-testid="btn-screenshot"
           onClick={handleScreenshot}
         >
           📷
@@ -137,6 +157,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName }) => {
         <button
           className="refine-btn refine-btn--record"
           title="Log bug or feature"
+          data-testid="btn-bug"
           onClick={() => setShowBugEditor((v) => !v)}
         >
           🐛
