@@ -6,6 +6,7 @@
 
 import Dexie, { type Table } from 'dexie';
 import type { Session, Bug, Feature, RecordingChunk, Screenshot, Action } from '@shared/types';
+import { DB_NAME } from '@shared/constants';
 
 class RefineDatabase extends Dexie {
   sessions!: Table<Session, string>;
@@ -16,7 +17,7 @@ class RefineDatabase extends Dexie {
   actions!: Table<Action, string>;
 
   constructor() {
-    super('refine-db');
+    super(DB_NAME);
     this.version(1).stores({
       sessions:    '&id, status, startedAt',
       recordings:  '++id, sessionId, chunkIndex',
