@@ -1,6 +1,6 @@
 # SynaptixLabs Refine — Acceptance Test Recorder
 
-> Chrome Extension for manual acceptance test recording with Playwright export
+> Chrome Extension for manual acceptance test recording with Playwright export — v1.0.0
 
 ---
 
@@ -33,9 +33,6 @@ Refine bridges the gap between manual exploratory testing and automated QA. It l
 # Install dependencies
 npm install
 
-# Development build (watch mode)
-npm run dev
-
 # Production build
 npm run build
 
@@ -43,6 +40,37 @@ npm run build
 # 1. Go to chrome://extensions
 # 2. Enable "Developer mode"
 # 3. Click "Load unpacked" → select dist/ folder
+```
+
+### Run the Demo App (TaskPilot)
+
+```bash
+cd demos/refine-demo-app
+npm install
+npm run dev
+# Opens at http://localhost:5173 (or next available port)
+```
+
+After loading the extension and starting the demo app:
+1. Click the Refine icon in Chrome → "New Session"
+2. Fill in session name, click "Start Recording"
+3. Navigate the app — a floating control bar appears at the bottom of the page
+4. Use the control bar or keyboard shortcuts to capture bugs, screenshots, stop recording
+5. Open the session in the popup → export reports, Playwright spec, or ZIP bundle
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+R` | Toggle recording (pause / resume) |
+| `Ctrl+Shift+S` | Capture screenshot |
+| `Ctrl+Shift+B` | Open inline bug/feature editor |
+
+### Development Build (watch mode)
+
+```bash
+npm run dev
+# Reload extension at chrome://extensions after each build
 ```
 
 ## Project Structure
@@ -98,9 +126,10 @@ Start here: [`docs/00_INDEX.md`](docs/00_INDEX.md)
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | Sprint 00 | Repo setup, scaffold, hello-world extension | ✅ Done |
-| Sprint 01 | P0 MVP: Recording + Screenshots + Bug Editor | Planned |
-| Sprint 02 | P0 Complete: Reports + Sessions. P1: Replay | Planned |
-| Sprint 03 | P1: Playwright Export + ZIP + Shortcuts | Planned |
+| Sprint 01 | P0 MVP: Session recording, control bar, screenshots, bug editor (R001–R005) | ✅ Done |
+| Sprint 02 | Reports, replay, Playwright export, ZIP, shortcuts (R006–R007, R010–R013) | ✅ Done |
+| Sprint 03 | P2 features, infra fixes, project folder, bug/feature workflow | 🔄 In Progress |
+| Sprint 04 | AI recording via Windsurf/Claude, project dashboard | Planned |
 
 ---
 

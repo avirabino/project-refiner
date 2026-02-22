@@ -1,0 +1,7 @@
+{
+  "name": "@types/css-font-loading-module",
+  "version": "999.0.0",
+  "description": "Empty stub — types are now built into TypeScript lib.dom.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

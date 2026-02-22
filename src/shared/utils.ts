@@ -59,3 +59,17 @@ export const generateFeatureId = (): string => {
 export const generateScreenshotId = (): string => {
   return `ss-${crypto.randomUUID().split('-')[0]}`;
 };
+
+/**
+ * Formats a duration in milliseconds to a human-readable string.
+ * Examples: "2h 5m 3s", "12m 30s", "45s", "0s"
+ */
+export const formatDuration = (ms: number): string => {
+  if (!ms || isNaN(ms)) return '0s';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+};

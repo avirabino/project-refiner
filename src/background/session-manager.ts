@@ -1,7 +1,7 @@
 /**
  * @file session-manager.ts
  * @description Session lifecycle state machine for Refine background service worker.
- * States: idle → RECORDING ↔ PAUSED → STOPPED → COMPLETED
+ * States: idle → RECORDING ↔ PAUSED → COMPLETED
  */
 
 import { SessionStatus, type Session } from '@shared/types';
@@ -51,9 +51,15 @@ export const sessionManager = {
     url: string,
     tabId?: number
   ): Promise<Session> {
+    if (state.sessionId) {
+      throw new Error(`[Refine] Session already active: ${state.sessionId}`);
+    }
     const sequence = await getNextSequence();
     const id = generateSessionId(new Date(), sequence);
     const now = Date.now();
+
+    const isUserUrl = (u: string) =>
+      Boolean(u) && !u.startsWith('chrome-extension://') && !u.startsWith('chrome://');
 
     const session: Session = {
       id,
@@ -62,7 +68,7 @@ export const sessionManager = {
       status: SessionStatus.RECORDING,
       startedAt: now,
       duration: 0,
-      pages: [url],
+      pages: isUserUrl(url) ? [url] : [],
       actionCount: 0,
       bugCount: 0,
       featureCount: 0,
@@ -124,17 +130,13 @@ export const sessionManager = {
     if (state.pausedAt) pausedMs += now - state.pausedAt;
     const duration = Math.max(0, now - session.startedAt - pausedMs);
 
-    await updateSession(state.sessionId, {
-      status: SessionStatus.COMPLETED,
-      stoppedAt: now,
-      duration,
-    });
+    const updates = { status: SessionStatus.COMPLETED, stoppedAt: now, duration };
+    await updateSession(state.sessionId, updates);
 
     notifyTab(state.tabId, 'STOP_RECORDING');
-
     stopKeepAlive();
-    const stoppedId = state.sessionId;
 
+    const stoppedId = state.sessionId;
     state.sessionId = null;
     state.status = SessionStatus.COMPLETED;
     state.pausedAt = null;
@@ -142,7 +144,7 @@ export const sessionManager = {
     state.tabId = undefined;
 
     console.log('[Refine] Session stopped:', stoppedId);
-    return (await getSession(stoppedId))!;
+    return { ...session, ...updates };
   },
 
   addPage(url: string): void {
@@ -152,7 +154,7 @@ export const sessionManager = {
       if (!session.pages.includes(url)) {
         updateSession(state.sessionId!, { pages: [...session.pages, url] });
       }
-    });
+    }).catch((err) => console.error('[Refine] addPage failed:', err));
   },
 
   getActiveSessionId(): string | null {

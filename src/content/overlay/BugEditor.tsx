@@ -36,6 +36,25 @@ const BugEditor: React.FC<BugEditorProps> = ({
     if (!title.trim()) return;
     setSaving(true);
 
+    let finalScreenshotId = screenshotId;
+
+    // B17: Auto-screenshot on save if one isn't provided
+    if (!finalScreenshotId) {
+      finalScreenshotId = await new Promise<string | undefined>((resolve) => {
+        chrome.runtime.sendMessage(
+          { type: MessageType.CAPTURE_SCREENSHOT, payload: { sessionId }, source: 'content' },
+          (response) => {
+            if (chrome.runtime.lastError || !response?.ok) {
+              console.warn('[Refine] Auto-screenshot failed:', chrome.runtime.lastError?.message);
+              resolve(undefined);
+            } else {
+              resolve(response.data?.screenshotId as string | undefined);
+            }
+          }
+        );
+      });
+    }
+
     const timestamp = Date.now();
 
     if (entryType === 'bug') {
@@ -48,10 +67,12 @@ const BugEditor: React.FC<BugEditorProps> = ({
         description: description.trim(),
         url: currentUrl,
         elementSelector,
-        screenshotId,
+        screenshotId: finalScreenshotId,
         timestamp,
       };
-      chrome.runtime.sendMessage({ type: MessageType.LOG_BUG, payload: bug, source: 'content' });
+      await new Promise<void>((resolve) => {
+        chrome.runtime.sendMessage({ type: MessageType.LOG_BUG, payload: bug, source: 'content' }, () => resolve());
+      });
     } else {
       const feature = {
         id: generateFeatureId(),
@@ -62,10 +83,12 @@ const BugEditor: React.FC<BugEditorProps> = ({
         description: description.trim(),
         url: currentUrl,
         elementSelector,
-        screenshotId,
+        screenshotId: finalScreenshotId,
         timestamp,
       };
-      chrome.runtime.sendMessage({ type: MessageType.LOG_FEATURE, payload: feature, source: 'content' });
+      await new Promise<void>((resolve) => {
+        chrome.runtime.sendMessage({ type: MessageType.LOG_FEATURE, payload: feature, source: 'content' }, () => resolve());
+      });
     }
 
     setSaving(false);

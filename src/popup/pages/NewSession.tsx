@@ -22,7 +22,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.url) setActiveTabUrl(tabs[0].url);
+      if (tabs[0]?.url) {
+        setActiveTabUrl(tabs[0].url);
+      } else {
+        setError('No active tab found. Navigate to a webpage before starting a session.');
+      }
       if (tabs[0]?.id) setActiveTabId(tabs[0].id);
     });
   }, []);

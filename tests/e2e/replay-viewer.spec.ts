@@ -1,30 +1,28 @@
 /**
- * Q202 — E2E: Replay Viewer
+ * Q202 — E2E: Replay Viewer (Download)
  *
- * Verifies: SessionDetail "Watch Replay" opens a new browser tab containing
- * a self-contained HTML replay with rrweb-player.
- *
- * Requires DEV to complete: D202 (replay-bundler), D203 (SessionDetail),
- * D206 (Watch Replay button wired).
+ * Verifies: SessionDetail "Download Replay" downloads a self-contained HTML
+ * file containing rrweb-player and session events.
  *
  * DEV CONTRACT:
- *   btn-watch-replay   — opens replay HTML in a new tab (NOT a download)
+ *   btn-watch-replay   — triggers download of replay-<id>.html
  *
- * ASSUMPTION (CTO B2): Watch Replay opens a new tab via URL.createObjectURL
- * or a data: URL. This spec uses context.waitForEvent('page') to capture it.
- * If DEV instead triggers a download, change to waitForDownload() pattern.
+ * NOTE: Originally opened a new tab via blob:chrome-extension:// URL, but
+ * MV3 CSP blocks inline <script> tags in extension-origin tabs. Changed to
+ * download pattern (S02 CSP fix, 2026-02-22). Sprint 03 will build a proper
+ * CSP-compliant extension replay page (s03-replay-csp).
  */
 
 import { test, expect } from './fixtures/extension.fixture';
-import { createSession, openTargetApp, stopAndOpenDetail } from './helpers/session';
+import { createSession, openTargetApp, stopAndOpenDetail, waitForDownload } from './helpers/session';
 
-test('Watch Replay opens a new tab with rrweb-player content', async ({ context, extensionId }) => {
+test('Download Replay produces a valid self-contained HTML file', async ({ context, extensionId }) => {
   const { popupPage } = await createSession(context, extensionId, 'Q202 Replay Session');
 
   const page = await openTargetApp(context);
   await expect(page.getByTestId('refine-control-bar')).toBeVisible({ timeout: 5000 });
 
-  // Record some navigation so there are rrweb events to replay
+  // Record some interaction so there are rrweb events to bundle
   await page.getByTestId('nav-about').click();
   await page.waitForLoadState('networkidle');
   await page.getByTestId('nav-form').click();
@@ -33,41 +31,26 @@ test('Watch Replay opens a new tab with rrweb-player content', async ({ context,
 
   const detail = await stopAndOpenDetail(page, popupPage, context, extensionId);
 
-  // Wait for new tab opened by Watch Replay button
-  const [replayPage] = await Promise.all([
-    context.waitForEvent('page'),
-    detail.getByTestId('btn-watch-replay').click(),
-  ]);
+  const download = await waitForDownload(detail, () =>
+    detail.getByTestId('btn-watch-replay').click()
+  );
 
-  await replayPage.waitForLoadState('domcontentloaded');
+  // 1. Filename must match replay-<session-id>.html pattern
+  expect(download.suggestedFilename()).toMatch(/^replay-.+\.html$/);
 
-  // 1. Replay page must not be blank
-  const bodyContent = await replayPage.evaluate(() => document.body.innerHTML);
-  expect(bodyContent.length).toBeGreaterThan(100);
+  // 2. File must have non-zero size
+  const filePath = await download.path();
+  expect(filePath).toBeTruthy();
 
-  // 2. Page must contain rrweb-player (either the element or its script)
-  const hasPlayer =
-    (await replayPage.locator('rrweb-player').count()) > 0 ||
-    (await replayPage.locator('[class*="replayer"]').count()) > 0 ||
-    bodyContent.includes('rrweb') ||
-    bodyContent.includes('replayer');
-  expect(hasPlayer).toBe(true);
+  if (filePath) {
+    const { statSync, readFileSync } = await import('fs');
+    const stats = statSync(filePath);
+    // Replay HTML must be at least 10 KB (rrweb-player UMD alone is ~200 KB)
+    expect(stats.size).toBeGreaterThan(10_000);
 
-  // 3. Session metadata present (name in title or body)
-  const pageTitle = await replayPage.title();
-  const hasMetadata =
-    pageTitle.includes('Replay') ||
-    bodyContent.includes('Q202 Replay Session') ||
-    bodyContent.includes('replay');
-  expect(hasMetadata).toBe(true);
-
-  // 4. No JS errors in replay page
-  const jsErrors: string[] = [];
-  replayPage.on('console', msg => {
-    if (msg.type() === 'error') jsErrors.push(msg.text());
-  });
-  await replayPage.waitForTimeout(1000);
-  // Allow rrweb-player internal warnings but fail on hard errors
-  const hardErrors = jsErrors.filter(e => !e.includes('Warning') && !e.includes('rrweb'));
-  expect(hardErrors, `Replay page JS errors: ${hardErrors.join(', ')}`).toHaveLength(0);
+    // Must contain rrweb-player markers and session name
+    const html = readFileSync(filePath, 'utf-8');
+    expect(html).toContain('rrweb');
+    expect(html).toContain('Q202 Replay Session');
+  }
 });

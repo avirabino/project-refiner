@@ -37,8 +37,12 @@ export async function generateZipBundle(
   const events = recordings.flatMap((c) => c.events);
   folder.file('replay.html', generateReplayHtml(session, events));
 
-  // Playwright spec
+  // Playwright spec + companion tsconfig so consumers can run `tsc --noEmit` on the bundle
   folder.file('regression.spec.ts', generatePlaywrightSpec(session, actions, bugs));
+  folder.file('tsconfig.json', JSON.stringify({
+    compilerOptions: { strict: true, module: 'commonjs', target: 'ES2020', skipLibCheck: true },
+    include: ['*.spec.ts'],
+  }, null, 2));
 
   // Screenshots
   if (screenshots.length > 0) {

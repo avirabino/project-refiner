@@ -11,7 +11,7 @@ function cssEscape(value: string): string {
 
 export interface SelectorResult {
   selector: string;
-  strategy: 'data-testid' | 'aria-label' | 'id' | 'css';
+  strategy: 'data-testid' | 'aria-label' | 'id' | 'css' | 'playwright';
   confidence: 'high' | 'medium' | 'low';
 }
 
@@ -51,7 +51,7 @@ export function getBestSelector(element: Element): SelectorResult {
   if (role && name) {
     return {
       selector: `[role="${role}"]:has-text("${name.replace(/"/g, '\\"')}")`,
-      strategy: 'css',
+      strategy: 'playwright',
       confidence: 'medium',
     };
   }

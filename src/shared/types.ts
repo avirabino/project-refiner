@@ -9,8 +9,6 @@
 export enum SessionStatus {
   RECORDING = 'RECORDING',
   PAUSED = 'PAUSED',
-  STOPPED = 'STOPPED',
-  PROCESSING = 'PROCESSING',
   COMPLETED = 'COMPLETED',
   ERROR = 'ERROR'
 }
@@ -64,7 +62,7 @@ export interface Action {
   type: 'click' | 'input' | 'navigation' | 'scroll';
   pageUrl: string;
   selector?: string;
-  selectorStrategy?: 'data-testid' | 'aria-label' | 'id' | 'css';
+  selectorStrategy?: 'data-testid' | 'aria-label' | 'id' | 'css' | 'playwright';
   selectorConfidence?: 'high' | 'medium' | 'low';
   value?: string;
 }

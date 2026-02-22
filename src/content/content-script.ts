@@ -10,6 +10,7 @@ import {
   pauseRecording,
   resumeRecording,
   handleNavigation,
+  recordCrossPageNavigation,
 } from './recorder';
 import { mountOverlay, unmountOverlay } from './overlay/mount';
 
@@ -22,8 +23,15 @@ chrome.runtime.sendMessage(
   (response) => {
     if (chrome.runtime.lastError) return;
     if (response?.ok && response.data?.isRecording && response.data?.sessionId) {
-      startRecording(response.data.sessionId as string);
-      mountOverlay(response.data.sessionId as string);
+      const sid = response.data.sessionId as string;
+      startRecording(sid);
+      mountOverlay(sid);
+      // DR-04: use background-tracked lastPageUrl — more reliable than document.referrer
+      const fromUrl = response.data.lastPageUrl as string | null;
+      const toUrl = window.location.href;
+      if (fromUrl && fromUrl !== toUrl) {
+        recordCrossPageNavigation(sid, fromUrl, toUrl);
+      }
       chrome.runtime.sendMessage({
         type: 'SESSION_STATUS_UPDATE',
         payload: { url: window.location.href },
@@ -65,21 +73,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
-// ── SPA navigation detection (history API) ────────────────────────────────────
+// ── SPA navigation detection ─────────────────────────────────────────────────
+// B17: Use lightweight setInterval polling instead of MutationObserver(subtree)
+// which fires hundreds of times per second on React/SPA pages.
 
 let lastUrl = window.location.href;
 
-const observer = new MutationObserver(() => {
+setInterval(() => {
   const currentUrl = window.location.href;
   if (currentUrl !== lastUrl) {
     handleNavigation(currentUrl);
     lastUrl = currentUrl;
   }
-});
+}, 500);
 
-observer.observe(document.body, { subtree: true, childList: true });
-
-// Also catch popstate (back/forward navigation)
+// popstate catches immediate back/forward browser navigation
 window.addEventListener('popstate', () => {
   const currentUrl = window.location.href;
   if (currentUrl !== lastUrl) {
@@ -87,3 +95,32 @@ window.addEventListener('popstate', () => {
     lastUrl = currentUrl;
   }
 });
+
+// ── Keyboard shortcut fallback (for Playwright automation and headless mode) ──
+// chrome.commands.onCommand cannot be triggered by Playwright keyboard events.
+// These DOM-level listeners mirror the manifest command behaviour by
+// programmatically clicking the corresponding overlay control-bar buttons.
+
+function getShadowRoot(): ShadowRoot | null {
+  return (document.getElementById('refine-root') as HTMLElement & { shadowRoot: ShadowRoot | null })?.shadowRoot ?? null;
+}
+
+document.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (!e.ctrlKey || !e.shiftKey) return;
+
+  const root = getShadowRoot();
+  if (!root) return;
+
+  if (e.key === 'S') {
+    e.preventDefault();
+    (root.querySelector('[data-testid="btn-screenshot"]') as HTMLButtonElement | null)?.click();
+  } else if (e.key === 'B') {
+    e.preventDefault();
+    (root.querySelector('[data-testid="btn-bug"]') as HTMLButtonElement | null)?.click();
+  } else if (e.key === 'R') {
+    e.preventDefault();
+    const btnPause = root.querySelector('[data-testid="btn-pause"]') as HTMLButtonElement | null;
+    const btnResume = root.querySelector('[data-testid="btn-resume"]') as HTMLButtonElement | null;
+    (btnPause ?? btnResume)?.click();
+  }
+}, { capture: true });

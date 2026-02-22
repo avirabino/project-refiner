@@ -1,10 +1,13 @@
-# Sprint 02 — Team DEV Report: Sprint 01 Delivery + Design Review Hardening
+# Sprint 02 — DEV Report (Pre-Sprint Baseline) — SUPERSEDED
 
-**Role:** `[DEV:all-modules]`
-**Sprint:** 02 (Pre-Sprint Baseline)
-**Date:** 2026-02-22
-**Audience:** `[CTO]` design review + `[QA]` testing baseline
-**Status:** ✅ **All acceptance gates green — Sprint 02 (Export & Ship) is unblocked**
+> ⚠️ **This document is the pre-sprint baseline report written before Sprint 02 implementation began.**
+> It has been superseded by the final delivery report.
+>
+> **→ See: [`sprint_02_final_report.md`](./sprint_02_final_report.md)**
+
+---
+
+*Archived 2026-02-22. Original content preserved below for historical reference.*
 
 ---
 

@@ -113,6 +113,20 @@ export async function getFeaturesBySession(sessionId: string): Promise<Feature[]
   return db.features.where('sessionId').equals(sessionId).sortBy('timestamp');
 }
 
+// ── Atomic counters (race-safe via Dexie .modify()) ─────────────────────────
+
+export async function incrementSessionActionCount(sessionId: string): Promise<void> {
+  await db.sessions.where('id').equals(sessionId).modify((s) => { s.actionCount++; });
+}
+
+export async function incrementSessionBugCount(sessionId: string): Promise<void> {
+  await db.sessions.where('id').equals(sessionId).modify((s) => { s.bugCount++; });
+}
+
+export async function incrementSessionFeatureCount(sessionId: string): Promise<void> {
+  await db.sessions.where('id').equals(sessionId).modify((s) => { s.featureCount++; });
+}
+
 // ── Screenshots ───────────────────────────────────────────────────────────────
 
 export async function addScreenshot(screenshot: Screenshot): Promise<string> {

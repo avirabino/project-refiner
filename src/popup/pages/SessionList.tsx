@@ -7,31 +7,22 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { SessionStatus } from '@shared/types';
 import type { Session } from '@shared/types';
 import { getAllSessions } from '@core/db';
-import { formatTimestamp } from '@shared/utils';
+import { formatTimestamp, formatDuration } from '@shared/utils';
+
+import { StorageIndicator } from '../components/StorageIndicator';
 
 interface SessionListProps {
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
 }
 
-const STATUS_COLORS: Record<SessionStatus, string> = {
+const STATUS_COLORS: Partial<Record<SessionStatus, string>> = {
   [SessionStatus.RECORDING]: 'bg-red-500/20 text-red-400 border-red-500/30',
   [SessionStatus.PAUSED]:    'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  [SessionStatus.STOPPED]:   'bg-gray-500/20 text-gray-400 border-gray-500/30',
-  [SessionStatus.PROCESSING]:'bg-blue-500/20 text-blue-400 border-blue-500/30',
   [SessionStatus.COMPLETED]: 'bg-green-500/20 text-green-400 border-green-500/30',
   [SessionStatus.ERROR]:     'bg-red-800/30 text-red-300 border-red-700/40',
 };
 
-function formatDuration(ms: number): string {
-  if (!ms) return '—';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m ${s % 60}s`;
-  return `${s}s`;
-}
 
 const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -125,6 +116,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
           </div>
         )}
       </div>
+      <StorageIndicator />
     </div>
   );
 };

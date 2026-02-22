@@ -2,7 +2,7 @@
 
 > **Product Requirements Document**
 > Owner: CPO
-> Version: 0.1.0
+> Version: 1.0.0
 
 ---
 
@@ -265,14 +265,33 @@ Explicitly **NOT** included in this version:
 
 ## Timeline
 
-| Sprint | Deliverables | Vibes |
-|--------|--------------|-------|
-| Sprint 00 | Repo setup, extension scaffold, Manifest V3 + React popup + content script hello-world | 15 V |
-| Sprint 01 | P0: Recording engine (R001-R003), screenshot (R004), bug editor (R005) | 45 V |
-| Sprint 02 | P0: Report generation (R006), session management (R007). P1: Replay (R010) | 25 V |
-| Sprint 03 | P1: Playwright export (R011), ZIP bundle (R012), keyboard shortcuts (R013) | 25 V |
+| Sprint | Deliverables | Vibes | Status |
+|--------|--------------|-------|--------|
+| Sprint 00 | Repo setup, extension scaffold, Manifest V3 + React popup + content script hello-world | 15 V | ✅ Done |
+| Sprint 01 | P0: Recording engine (R001–R003), screenshot (R004), bug editor (R005) | 45 V | ✅ Done |
+| Sprint 02 | P0: Report generation (R006), session management (R007). P1: Replay (R010), Playwright export (R011), ZIP bundle (R012), keyboard shortcuts (R013) | 55 V | ✅ Done (v1.0.0) |
+| Sprint 03 | Infra fixes (CTO DR + Sprint 01 HIGH bugs), P2 features (R020–R027), project folder + auto-publish | ~62 V | 🔄 In Progress |
+| Sprint 04 | AI recording via Windsurf/Claude (/refine-record workflow), project dashboard, silence compression | ~20 V | Planned |
 
-**Total estimated: ~110 Vibes (~110K tokens of agent work)**
+**Total estimated: ~197 Vibes**
+
+### New Requirements (Sprint 03)
+
+| ID | Requirement | Priority | Sprint |
+|---|---|---|---|
+| R014 | Mouse tracking as session preference (default OFF) | P1 | Sprint 03 |
+| R025 | Project / app association on sessions + output folder path | P1 | Sprint 03 |
+| R026 | Bug lifecycle status: open / in_progress / resolved / wontfix | P2 | Sprint 03 |
+| R027 | Feature sprint assignment: status + sprintRef field | P2 | Sprint 03 |
+
+### Platform Architecture (Sprint 04)
+
+Refine evolves into a **VIBE coding testing platform**:
+- Manual sessions auto-export structured artifacts to a user-selected project folder
+- Folder structure: `<root>/<project>/sessions/<ats-id>/report.md + report.json + regression.spec.ts`
+- Windsurf/Claude agents (`[CPO]`, `[QA]`, `[DEV]`, `[CTO]`) read session artifacts directly from the filesystem
+- AI recording: `/refine-record` Windsurf workflow uses Playwright + Cascade to generate sessions without the Chrome extension
+- No cloud sync required — filesystem IS the sharing mechanism
 
 ---
 
@@ -303,5 +322,5 @@ Explicitly **NOT** included in this version:
 
 ---
 
-*Last updated: 2026-02-20*
-*Approved by: Avi (CPTO, SynaptixLabs)*
+*Last updated: 2026-02-22 (v1.0.0 — Sprint 02 closure + Sprint 03 planning)*
+*Approved by: Avi (FOUNDER, SynaptixLabs)*

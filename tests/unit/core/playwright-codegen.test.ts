@@ -77,9 +77,9 @@ describe('generatePlaywrightSpec', () => {
     expect(spec).toContain(`await page.goto('http://localhost:38470/')`);
   });
 
-  it('maps click to page.click with getByTestId for data-testid selector', () => {
+  it('maps click to page.click with CSS attribute selector for data-testid', () => {
     const spec = generatePlaywrightSpec(baseSession, [clickAction], []);
-    expect(spec).toContain(`page.getByTestId('btn-submit')`);
+    expect(spec).toContain(`'[data-testid="btn-submit"]'`);
     expect(spec).toContain('await page.click(');
   });
 
@@ -87,7 +87,7 @@ describe('generatePlaywrightSpec', () => {
     const spec = generatePlaywrightSpec(baseSession, [fillAction], []);
     expect(spec).toContain(`await page.fill(`);
     expect(spec).toContain(`'Alice'`);
-    expect(spec).toContain(`page.getByTestId('input-name')`);
+    expect(spec).toContain(`'[data-testid="input-name"]'`);
   });
 
   it('inserts BUG comment at correct position between actions', () => {

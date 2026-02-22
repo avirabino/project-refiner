@@ -8,20 +8,11 @@ import React, { useState, useEffect } from 'react';
 import { SessionStatus } from '@shared/types';
 import type { Session, Bug } from '@shared/types';
 import { getSession, getBugsBySession, deleteSession } from '@core/db';
+import { formatDuration } from '@shared/utils';
 
 interface SessionDetailProps {
   sessionId: string;
   onBack: () => void;
-}
-
-function formatDuration(ms: number): string {
-  if (!ms) return '0s';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m ${s % 60}s`;
-  return `${s}s`;
 }
 
 function formatDate(ts: number): string {
@@ -38,8 +29,6 @@ const STATUS_COLORS: Record<string, string> = {
   [SessionStatus.RECORDING]: 'text-red-400',
   [SessionStatus.PAUSED]:    'text-amber-400',
   [SessionStatus.COMPLETED]: 'text-green-400',
-  [SessionStatus.STOPPED]:   'text-gray-400',
-  [SessionStatus.PROCESSING]:'text-blue-400',
   [SessionStatus.ERROR]:     'text-red-300',
 };
 
@@ -50,6 +39,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exportLoading, setExportLoading] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +67,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
 
   const handleExport = async (type: string) => {
     setExportLoading(type);
+    setExportError(null);
     try {
       const { generateJsonReport, generateMarkdownReport } = await import('@core/report-generator');
       const { generateReplayHtml } = await import('@core/replay-bundler');
@@ -100,9 +91,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         const chunks = await getRecordingChunks(sessionId);
         const events = chunks.flatMap((c) => c.events);
         const html = generateReplayHtml(session, events);
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        chrome.tabs.create({ url });
+        triggerDownload(html, `replay-${sessionId}.html`, 'text/html');
       } else if (type === 'playwright') {
         const [actions, bugsForSpec] = await Promise.all([
           getActionsBySession(sessionId),
@@ -119,10 +108,15 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         ]);
         const blob = await generateZipBundle(session, bugs, features, actions, screenshots, chunks);
         const url = URL.createObjectURL(blob);
-        triggerDownload(url, `refine-${sessionId}.zip`, 'application/zip');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `refine-${sessionId}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
       }
     } catch (err) {
       console.error('[Refine] Export failed:', err);
+      setExportError(err instanceof Error ? err.message : 'Export failed');
     } finally {
       setExportLoading(null);
     }
@@ -232,6 +226,11 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         {/* Export buttons */}
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Export</p>
+          {exportError && (
+            <div data-testid="export-error" className="text-xs text-red-400 bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
+              {exportError}
+            </div>
+          )}
           <button
             data-testid="btn-download-report"
             onClick={() => handleExport('report')}
@@ -246,7 +245,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
             disabled={exportLoading !== null}
             className="w-full text-left px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-xs font-medium text-white transition-colors"
           >
-            {exportLoading === 'replay' ? '⏳ Generating…' : '▶ Watch Replay'}
+            {exportLoading === 'replay' ? '⏳ Generating…' : '▶ Download Replay'}
           </button>
           <button
             data-testid="btn-export-playwright"

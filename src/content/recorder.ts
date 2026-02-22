@@ -6,8 +6,10 @@
 
 import { record } from 'rrweb';
 import { MessageType } from '@shared/types';
-import type { RecordingChunk } from '@shared/types';
+import type { RecordingChunk, Action } from '@shared/types';
 import { createNavigationAction } from './action-extractor';
+import { getBestSelector } from './selector-engine';
+import { SESSION_ID_FORMAT } from '@shared/constants';
 
 const MAX_BUFFER_EVENTS = 500;
 const MAX_BUFFER_BYTES = 5 * 1024 * 1024; // 5MB
@@ -18,6 +20,7 @@ interface RecorderState {
   isPaused: boolean;
   stopFn: (() => void) | null;
   eventBuffer: unknown[];
+  bufferBytes: number;
   chunkIndex: number;
   lastUrl: string;
 }
@@ -28,9 +31,49 @@ const state: RecorderState = {
   isPaused: false,
   stopFn: null,
   eventBuffer: [],
+  bufferBytes: 0,
   chunkIndex: 0,
   lastUrl: '',
 };
+
+function sendAction(action: Action): void {
+  sendToBackground(MessageType.ACTION_RECORDED, action);
+}
+
+function onDocumentClick(e: MouseEvent): void {
+  if (!state.isRecording || state.isPaused || !state.sessionId) return;
+  const element = e.target as Element;
+  if (!element || element.closest('#refine-root')) return;
+  const { selector, strategy, confidence } = getBestSelector(element);
+  sendAction({
+    id: `act-${crypto.randomUUID().split('-')[0]}`,
+    sessionId: state.sessionId,
+    timestamp: Date.now(),
+    type: 'click',
+    pageUrl: window.location.href,
+    selector,
+    selectorStrategy: strategy,
+    selectorConfidence: confidence,
+  });
+}
+
+function onDocumentChange(e: Event): void {
+  if (!state.isRecording || state.isPaused || !state.sessionId) return;
+  const element = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  if (!element || element.closest('#refine-root')) return;
+  const { selector, strategy, confidence } = getBestSelector(element);
+  sendAction({
+    id: `act-${crypto.randomUUID().split('-')[0]}`,
+    sessionId: state.sessionId,
+    timestamp: Date.now(),
+    type: 'input',
+    pageUrl: window.location.href,
+    selector,
+    selectorStrategy: strategy,
+    selectorConfidence: confidence,
+    value: (element as HTMLInputElement).value ?? '',
+  });
+}
 
 function sendToBackground(type: string, payload: unknown): void {
   chrome.runtime.sendMessage({ type, payload, source: 'content' }, () => {
@@ -38,14 +81,6 @@ function sendToBackground(type: string, payload: unknown): void {
       console.warn('[Refine] Background message failed:', chrome.runtime.lastError.message);
     }
   });
-}
-
-function estimateBytes(events: unknown[]): number {
-  try {
-    return JSON.stringify(events).length * 2; // rough estimate
-  } catch {
-    return 0;
-  }
 }
 
 function flushBuffer(final = false): void {
@@ -61,6 +96,7 @@ function flushBuffer(final = false): void {
 
   sendToBackground(MessageType.RECORDING_CHUNK, chunk);
   state.eventBuffer = [];
+  state.bufferBytes = 0;
 
   if (final) {
     console.log('[Refine] Final chunk flushed, index:', chunk.chunkIndex);
@@ -72,11 +108,16 @@ export function startRecording(sessionId: string): void {
     console.warn('[Refine] Already recording');
     return;
   }
+  if (!SESSION_ID_FORMAT.test(sessionId)) {
+    console.error('[Refine] Invalid session ID format, refusing to start:', sessionId);
+    return;
+  }
 
   state.sessionId = sessionId;
   state.isRecording = true;
   state.isPaused = false;
   state.eventBuffer = [];
+  state.bufferBytes = 0;
   state.chunkIndex = 0;
   state.lastUrl = window.location.href;
 
@@ -85,10 +126,11 @@ export function startRecording(sessionId: string): void {
       if (state.isPaused) return;
 
       state.eventBuffer.push(event);
+      try { state.bufferBytes += JSON.stringify(event).length * 2; } catch { /* ignore */ }
 
       const shouldFlush =
         state.eventBuffer.length >= MAX_BUFFER_EVENTS ||
-        estimateBytes(state.eventBuffer) >= MAX_BUFFER_BYTES;
+        state.bufferBytes >= MAX_BUFFER_BYTES;
 
       if (shouldFlush) flushBuffer();
     },
@@ -96,13 +138,17 @@ export function startRecording(sessionId: string): void {
     sampling: {
       mousemove: 50,
       mouseInteraction: true,
-      scroll: 150,
+      scroll: 300,
     },
     checkoutEveryNms: 30000, // S01-001: full snapshot every 30s
     blockSelector: '#refine-root', // exclude our own overlay from recording
   });
 
   state.stopFn = stopFn ?? null;
+
+  document.addEventListener('click', onDocumentClick, { capture: true });
+  document.addEventListener('change', onDocumentChange, { capture: true });
+
   console.log('[Refine] Recording started for session:', sessionId);
 }
 
@@ -129,6 +175,9 @@ export function stopRecording(): void {
 
   flushBuffer(true);
 
+  document.removeEventListener('click', onDocumentClick, { capture: true });
+  document.removeEventListener('change', onDocumentChange, { capture: true });
+
   state.isRecording = false;
   state.isPaused = false;
   state.sessionId = null;
@@ -149,6 +198,17 @@ export function handleNavigation(toUrl: string): void {
 
   state.lastUrl = toUrl;
   console.log('[Refine] Navigation recorded:', fromUrl, '→', toUrl);
+}
+
+/**
+ * Records a cross-page (full reload) navigation when the content script
+ * reinitialises on a new page that belongs to an active session.
+ * Uses document.referrer as the fromUrl.
+ */
+export function recordCrossPageNavigation(sessionId: string, fromUrl: string, toUrl: string): void {
+  if (!fromUrl || fromUrl === toUrl) return;
+  const action = createNavigationAction(sessionId, fromUrl, toUrl, Date.now());
+  sendToBackground(MessageType.ACTION_RECORDED, action);
 }
 
 export function isRecording(): boolean {

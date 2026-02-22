@@ -5,6 +5,7 @@
  */
 
 import type { Session } from '@shared/types';
+import { formatDuration } from '@shared/utils';
 // Relative path bypasses the rrweb-player package exports map.
 // Vite inlines these as raw strings at build time.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -13,14 +14,6 @@ import playerJs from '../../node_modules/rrweb-player/dist/rrweb-player.umd.min.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import playerCss from '../../node_modules/rrweb-player/dist/style.min.css?raw';
-
-function formatDuration(ms: number): string {
-  if (!ms) return '0s';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  if (m > 0) return `${m}m ${s % 60}s`;
-  return `${s}s`;
-}
 
 /**
  * Generates a fully self-contained HTML string for replaying a session.

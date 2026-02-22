@@ -1,9 +1,15 @@
-# Sprint 02 — Team QA Report
+# Sprint 02 — QA Report (Contract-First Draft) — SUPERSEDED
 
-**Sprint:** 02 (FINAL)
-**Role:** `[QA]`
-**Date:** 2026-02-22
-**Status:** ⏳ Specs written (contract-first) — awaiting DEV D203–D209 delivery to go green
+> ⚠️ **This document was the contract-first QA draft written before DEV delivery.**
+> All specs are now implemented and passing. See the final report for complete gate status.
+>
+> **→ See: [`sprint_02_final_report.md`](./sprint_02_final_report.md)**
+
+---
+
+*Archived 2026-02-22. Original content preserved below for historical reference.*
+
+---
 
 ---
 

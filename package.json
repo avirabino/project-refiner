@@ -1,6 +1,6 @@
 {
   "name": "synaptix-refine",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "SynaptixLabs Refine — Chrome Extension for recording acceptance testing sessions with Playwright export",
   "type": "module",
@@ -52,5 +52,8 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "overrides": {
+    "@types/css-font-loading-module": "file:./stubs/empty-css-font-types"
   }
 }

@@ -19,12 +19,24 @@ type RecordingState = 'recording' | 'paused';
 const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop }) => {
   const [recordingState, setRecordingState] = useState<RecordingState>('recording');
   const [elapsed, setElapsed] = useState(0);
-  const [startTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(Date.now());
   const [pauseStart, setPauseStart] = useState<number | null>(null);
   const [totalPaused, setTotalPaused] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [showBugEditor, setShowBugEditor] = useState(false);
   const [lastClickedSelector, setLastClickedSelector] = useState<string | undefined>(undefined);
+
+  // B15: Sync startTime from background so timer survives cross-page navigation
+  useEffect(() => {
+    chrome.runtime.sendMessage(
+      { type: MessageType.GET_SESSION_STATUS, source: 'content' },
+      (response) => {
+        if (response?.ok && response.data?.startedAt) {
+          setStartTime(response.data.startedAt as number);
+        }
+      }
+    );
+  }, []);
 
   // Track elapsed time
   useEffect(() => {
@@ -70,6 +82,9 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
 
   const handleStop = () => {
     chrome.runtime.sendMessage({ type: MessageType.STOP_RECORDING, source: 'content' }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[Refine] Stop recording failed:', chrome.runtime.lastError.message);
+      }
       onStop?.();
     });
   };
@@ -121,7 +136,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
         {recordingState === 'recording' && (
           <button
             className="refine-btn"
-            title="Pause"
+            title="Pause (Ctrl+Shift+R)"
             aria-label="Pause recording"
             data-testid="btn-pause"
             onClick={handlePauseResume}
@@ -132,7 +147,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
         {recordingState === 'paused' && (
           <button
             className="refine-btn"
-            title="Resume"
+            title="Resume (Ctrl+Shift+R)"
             aria-label="Resume recording"
             data-testid="btn-resume"
             onClick={handlePauseResume}
@@ -153,7 +168,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
 
         <button
           className="refine-btn"
-          title="Take screenshot"
+          title="Take screenshot (Ctrl+Shift+S)"
           aria-label="Take screenshot"
           data-testid="btn-screenshot"
           onClick={handleScreenshot}
@@ -163,10 +178,10 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
 
         <button
           className="refine-btn refine-btn--record"
-          title="Log bug or feature"
-          aria-label="Log bug or feature"
+          title="Log Bug / Feature (Ctrl+Shift+B)"
+          aria-label="Log Bug or Feature"
           data-testid="btn-bug"
-          onClick={() => setShowBugEditor((v) => !v)}
+          onClick={() => setShowBugEditor(true)}
         >
           🐛
         </button>

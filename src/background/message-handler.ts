@@ -14,10 +14,10 @@ import {
   addFeature,
   addRecordingChunk,
   addAction,
-  getBugsBySession,
-  getFeaturesBySession,
-  updateSession,
   getSession,
+  incrementSessionActionCount,
+  incrementSessionBugCount,
+  incrementSessionFeatureCount,
 } from '@core/db';
 
 export function handleMessage(
@@ -85,13 +85,8 @@ export function handleMessage(
         return false;
       }
       addAction(action)
-        .then(async () => {
-          const session = await getSession(sessionId);
-          if (session) {
-            await updateSession(sessionId, { actionCount: session.actionCount + 1 });
-          }
-          sendResponse({ ok: true });
-        })
+        .then(() => incrementSessionActionCount(sessionId))
+        .then(() => sendResponse({ ok: true }))
         .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
       return true;
     }
@@ -99,11 +94,8 @@ export function handleMessage(
     case MessageType.LOG_BUG: {
       const bug = message.payload as Bug;
       addBug(bug)
-        .then(async () => {
-          const bugs = await getBugsBySession(bug.sessionId);
-          await updateSession(bug.sessionId, { bugCount: bugs.length });
-          sendResponse({ ok: true, data: { id: bug.id } });
-        })
+        .then(() => incrementSessionBugCount(bug.sessionId))
+        .then(() => sendResponse({ ok: true, data: { id: bug.id } }))
         .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
       return true;
     }
@@ -111,11 +103,8 @@ export function handleMessage(
     case MessageType.LOG_FEATURE: {
       const feature = message.payload as Feature;
       addFeature(feature)
-        .then(async () => {
-          const features = await getFeaturesBySession(feature.sessionId);
-          await updateSession(feature.sessionId, { featureCount: features.length });
-          sendResponse({ ok: true, data: { id: feature.id } });
-        })
+        .then(() => incrementSessionFeatureCount(feature.sessionId))
+        .then(() => sendResponse({ ok: true, data: { id: feature.id } }))
         .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
       return true;
     }
@@ -129,15 +118,24 @@ export function handleMessage(
     }
 
     case MessageType.GET_SESSION_STATUS: {
-      sendResponse({
-        ok: true,
-        data: {
-          sessionId: sessionManager.getActiveSessionId(),
-          status: sessionManager.getStatus(),
-          isRecording: sessionManager.isRecording(),
-        },
-      });
-      return false;
+      const activeId = sessionManager.getActiveSessionId();
+      if (activeId) {
+        getSession(activeId)
+          .then((session) => sendResponse({
+            ok: true,
+            data: {
+              sessionId: activeId,
+              status: sessionManager.getStatus(),
+              isRecording: sessionManager.isRecording(),
+              startedAt: session?.startedAt ?? null,
+              lastPageUrl: session?.pages[session.pages.length - 1] ?? null,
+            },
+          }))
+          .catch(() => sendResponse({ ok: true, data: { sessionId: activeId, status: sessionManager.getStatus(), isRecording: sessionManager.isRecording(), startedAt: null, lastPageUrl: null } }));
+      } else {
+        sendResponse({ ok: true, data: { sessionId: null, status: sessionManager.getStatus(), isRecording: false, startedAt: null, lastPageUrl: null } });
+      }
+      return true;
     }
 
     case MessageType.SESSION_STATUS_UPDATE: {
