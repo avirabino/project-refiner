@@ -2,9 +2,19 @@ import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
 
 export default defineConfig({
+  plugins: [
+    {
+      name: 'raw-transform',
+      transform(_code: string, id: string) {
+        if (id.includes('?raw')) {
+          return { code: `export default ''` };
+        }
+      },
+    },
+  ],
   test: {
     environment: 'jsdom',
-    reporter: 'dot',
+    reporters: 'dot',
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     coverage: {
       provider: 'v8',

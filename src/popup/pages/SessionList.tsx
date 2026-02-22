@@ -3,7 +3,7 @@
  * @description Session list page. Shows all sessions from Dexie with status badges.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { SessionStatus } from '@shared/types';
 import type { Session } from '@shared/types';
 import { getAllSessions } from '@core/db';
@@ -11,6 +11,7 @@ import { formatTimestamp } from '@shared/utils';
 
 interface SessionListProps {
   onNewSession: () => void;
+  onSelectSession: (id: string) => void;
 }
 
 const STATUS_COLORS: Record<SessionStatus, string> = {
@@ -32,7 +33,7 @@ function formatDuration(ms: number): string {
   return `${s}s`;
 }
 
-const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
+const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,7 +107,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
                   Active
                 </p>
                 {activeSessions.map((s) => (
-                  <SessionCard key={s.id} session={s} />
+                  <SessionCard key={s.id} session={s} onSelect={onSelectSession} />
                 ))}
               </>
             )}
@@ -117,7 +118,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
                   Past sessions
                 </p>
                 {pastSessions.map((s) => (
-                  <SessionCard key={s.id} session={s} />
+                  <SessionCard key={s.id} session={s} onSelect={onSelectSession} />
                 ))}
               </>
             )}
@@ -130,10 +131,10 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession }) => {
 
 interface SessionCardProps {
   session: Session;
+  onSelect: (id: string) => void;
 }
 
-const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
-  const [expanded, setExpanded] = useState(false);
+const SessionCard: React.FC<SessionCardProps> = ({ session, onSelect }) => {
   const isActive =
     session.status === SessionStatus.RECORDING ||
     session.status === SessionStatus.PAUSED;
@@ -141,7 +142,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
   return (
     <div
       data-testid="session-list-item"
-      onClick={() => setExpanded((v) => !v)}
+      onClick={() => onSelect(session.id)}
       style={{ cursor: 'pointer' }}
       className={`rounded-xl border p-3 transition-colors ${
         isActive
@@ -175,36 +176,6 @@ const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
         {session.screenshotCount > 0 && <span>📷 {session.screenshotCount}</span>}
         {session.actionCount > 0 && <span>🖱 {session.actionCount}</span>}
       </div>
-
-      {expanded && (
-        <div
-          className="mt-3 pt-3 border-t border-gray-700/50 grid grid-cols-2 gap-2 text-xs"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-col gap-0.5">
-            <span className="text-gray-500 uppercase tracking-wide text-[10px] font-semibold">Status</span>
-            <span data-testid="session-status" className="text-white font-semibold">{session.status}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-gray-500 uppercase tracking-wide text-[10px] font-semibold">Duration</span>
-            <span data-testid="session-duration" className="text-white font-semibold">{formatDuration(session.duration)}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-gray-500 uppercase tracking-wide text-[10px] font-semibold">Bugs</span>
-            <span data-testid="session-bug-count" className="text-white font-semibold">{session.bugCount}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-gray-500 uppercase tracking-wide text-[10px] font-semibold">Screenshots</span>
-            <span data-testid="session-screenshot-count" className="text-white font-semibold">{session.screenshotCount}</span>
-          </div>
-          {session.pages.length > 0 && (
-            <div className="col-span-2 flex flex-col gap-0.5">
-              <span className="text-gray-500 uppercase tracking-wide text-[10px] font-semibold">Pages</span>
-              <span className="text-gray-400 truncate">{session.pages.length} page{session.pages.length !== 1 ? 's' : ''} visited</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

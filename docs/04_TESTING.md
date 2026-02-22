@@ -457,4 +457,112 @@ Added to `tests/fixtures/target-app/` for rrweb recording coverage:
 
 ---
 
+---
+
+## Sprint 02 E2E Patterns
+
+> **QA Team Reference.** Added Sprint 02.
+
+### File Download Testing Pattern
+
+Export buttons (Report, Playwright spec, ZIP) trigger file downloads from the popup page. Use `page.waitForEvent('download')` via the `waitForDownload()` helper:
+
+```typescript
+import { waitForDownload } from './helpers/session';
+
+const download = await waitForDownload(detail, () =>
+  detail.getByTestId('btn-download-report').click()
+);
+const filename = download.suggestedFilename();  // e.g. 'report.json'
+const path = await download.path();             // temp file path for content inspection
+```
+
+`download.path()` returns a temp file path you can read with `fs.readFileSync`. For JSON reports, parse and assert structure. For ZIP files, use `jszip` (Sprint 02 dependency).
+
+---
+
+### New Tab Capture Pattern (Replay Viewer)
+
+`Watch Replay` opens a new tab. Capture it with `context.waitForEvent('page')`:
+
+```typescript
+const [replayPage] = await Promise.all([
+  context.waitForEvent('page'),
+  detail.getByTestId('btn-watch-replay').click(),
+]);
+await replayPage.waitForLoadState('domcontentloaded');
+```
+
+---
+
+### stopAndOpenDetail Helper
+
+All Sprint 02 specs use this helper to stop recording and navigate to SessionDetail:
+
+```typescript
+import { stopAndOpenDetail } from './helpers/session';
+
+// After recording interactions on targetPage:
+const detail = await stopAndOpenDetail(targetPage, popupPage, context, extensionId);
+// detail is now showing session-detail-container
+await detail.getByTestId('btn-download-report').click();
+```
+
+---
+
+### Keyboard Shortcut Limitation
+
+`chrome.commands` shortcuts are processed by Chrome's native keyboard handling. Playwright's `page.keyboard.press()` DOES reach Chrome commands in headful mode, but:
+- Reliability varies by OS and Chrome version
+- In headless mode or restricted CI environments, shortcuts may not fire
+
+If Q206 fails in CI: mark as manual-only and document the binding in `manifest.json`. Automated coverage of the shortcut *effect* is provided by unit tests in `message-handler.test.ts`.
+
+---
+
+### data-testid Contract — Sprint 02
+
+DEV must implement these exactly. Full context in `docs/sprints/sprint_02/todo/sprint_02_team_qa_todo.md`.
+
+#### SessionDetail Page
+
+| `data-testid` | Element | Notes |
+|---|---|---|
+| `session-detail-container` | Root container | Visible after clicking session-list-item |
+| `btn-back` | Button | Returns to SessionList |
+| `btn-download-report` | Button | JSON + MD report download |
+| `btn-watch-replay` | Button | Opens replay in new tab |
+| `btn-export-playwright` | Button | Downloads `.spec.ts` |
+| `btn-download-zip` | Button | Downloads ZIP bundle |
+| `btn-delete-session` | Button | Opens delete confirmation |
+| `confirm-delete` | Button | Confirms delete action |
+
+---
+
+### E2E Test Specs — Sprint 02
+
+| Spec | File | Tests | Key pattern |
+|---|---|---|---|
+| Report Export | `tests/e2e/report-export.spec.ts` | 2 | `waitForDownload`, JSON schema assert |
+| Replay Viewer | `tests/e2e/replay-viewer.spec.ts` | 1 | `context.waitForEvent('page')` |
+| Playwright Export | `tests/e2e/playwright-export.spec.ts` | 2 | `waitForDownload`, content assertions, tsc check |
+| ZIP Export | `tests/e2e/zip-export.spec.ts` | 3 | `waitForDownload`, JSZip inspection |
+| Session Delete | `tests/e2e/session-delete.spec.ts` | 3 | Confirm dialog, list update, IndexedDB orphan check |
+| Keyboard Shortcuts | `tests/e2e/keyboard-shortcuts.spec.ts` | 4 | `page.keyboard.press()`, effect verification |
+
+All specs are **contract-first** — written before DEV delivery. Will pass once DEV completes D203–D209.
+
+---
+
+### Known E2E Limitations (Sprint 02)
+
+| Limitation | Impact | Mitigation |
+|---|---|---|
+| `captureVisibleTab` fails in Playwright headful | Screenshots are 1×1 PNGs | Test count increments, not content quality |
+| `chrome.commands` may not fire from synthetic keys | Q206 keyboard tests may be flaky in CI | Manual testing for binding; unit tests for handler logic |
+| Download content inspection requires temp file access | Need `await download.path()` | Already handled in all download specs |
+| `jszip` not yet installed | Q204 ZIP content inspection skipped until installed | Fallback to size check; install with `npm install jszip@^3.10.1` |
+
+---
+
 *Last updated: 2026-02-22*

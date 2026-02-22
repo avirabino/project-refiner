@@ -2,7 +2,7 @@
 
 **Owner:** `[QA]`
 **Sprint:** 02 (FINAL)
-**Depends on:** DEV Phase 5 (ZIP export wired — all generators done). Q206 (shortcuts) waits for Phase 6.
+**Depends on:** DEV Phase 3 (export buttons wired in SessionDetail). Q206 (shortcuts) waits for Phase 3 D208.
 **Budget:** ~10V (QA share)
 
 ---
@@ -10,14 +10,85 @@
 ## Reading Order
 
 1. `AGENTS.md` (root Tier-1)
-2. `docs/04_TESTING.md` — existing patterns
-3. `tests/e2e/fixtures/extension.fixture.ts` — reuse
+2. `docs/04_TESTING.md` — existing patterns + Sprint 02 section
+3. `tests/e2e/helpers/session.ts` — shared helpers (updated Sprint 02)
 4. `docs/sprints/sprint_02/sprint_02_index.md`
 5. This file
 
 ---
 
+## QA Baseline — Verified 2026-02-22
+
+```
+npx vitest run        → 56/56 ✅
+npx playwright test   → 10/10 ✅ (Sprint 00 ×3 + Sprint 01 ×7)
+```
+
+---
+
+## QA Findings from DEV Report Review
+
+### GOOD
+- All Sprint 01 data-testid contracts fulfilled
+- Cascading delete implemented (transactional)
+- Shadow DOM `open` mode confirmed
+- `getPopupPage()` helper added to `session.ts` — handles popup close on focus loss
+- `COMPLETED` (not `STOPPED`) terminal status confirmed
+
+### Flags for CTO
+
+| # | Flag | Severity | Action |
+|---|---|---|---|
+| F1 | `constants.ts` missing `DB_NAME` / `KEEPALIVE_ALARM_NAME` per source map — not exported | Low | CTO confirm DB name |
+| F2 | Q206 keyboard shortcuts: Playwright cannot trigger `chrome.commands` via `page.keyboard.press()` | High | See Q206 strategy below |
+| F3 | Screenshots in E2E = always 1×1 PNG placeholder (captureVisibleTab fails in headful Playwright) | Low | Mitigated — test count only |
+| F4 | `Watch Replay` — new tab vs download unclear (dev todo says both) | Medium | CTO confirm before Q202 |
+
+### Open Questions for `[CTO]`
+
+> **B1 (Blocking):** What is the Dexie DB name? `constants.ts` does not export `DB_NAME`. Need exact string for Q205 IndexedDB orphan verification.
+>
+> **B2 (Blocking):** `Watch Replay` — new tab open or file download? Need correct Playwright event to intercept (`context.waitForEvent('page')` vs `page.waitForEvent('download')`).
+>
+> **B3 (Blocking):** SessionDetail navigation — hash route (`#/session/:id`) or must always click through SessionList? Affects how specs navigate to the detail view.
+>
+> **A1 (Advisory):** Q206 keyboard shortcut E2E strategy — recommend testing via message injection (bypass `chrome.commands` layer) for automated coverage. Confirm acceptable or mark as manual-only.
+>
+> **A2 (Advisory):** `btn-download-report` — triggers 1 download (combined) or 2 (JSON + MD separately)? Spec needs to await correct number of download events.
+
+---
+
+## data-testid Contract — Sprint 02
+
+DEV must implement these exactly. QA specs depend on them.
+
+### SessionDetail Page
+
+| `data-testid` | Element | Notes |
+|---|---|---|
+| `session-detail-container` | Root container | The detail view |
+| `btn-back` | Button | Returns to SessionList |
+| `btn-download-report` | Button | Triggers JSON + MD download |
+| `btn-watch-replay` | Button | Opens replay in new tab |
+| `btn-export-playwright` | Button | Downloads `.spec.ts` |
+| `btn-download-zip` | Button | Downloads ZIP bundle |
+| `btn-delete-session` | Button | Starts delete with confirmation |
+| `confirm-delete` | Button | Confirmation button in dialog |
+
+### Keyboard Shortcuts (manifest.json)
+
+| Command | Binding | Behaviour |
+|---|---|---|
+| `toggle-recording` | `Ctrl+Shift+R` | Pause if RECORDING; resume if PAUSED |
+| `capture-screenshot` | `Ctrl+Shift+S` | Captures screenshot (active session only) |
+| `open-bug-editor` | `Ctrl+Shift+B` | Opens BugEditor (active session only) |
+
+---
+
 ## After DEV Delivers Phase 3 — E2E Specs
+
+> **Status:** All 6 specs written contract-first. Shared helper `tests/e2e/helpers/session.ts` updated with `navigateToSessionDetail()` and `waitForDownload()` utilities.
+> Will be green once DEV delivers D203 (SessionDetail), D206 (export buttons), D207 (delete), D208 (shortcuts).
 
 ### Q201: E2E — Report Export (`tests/e2e/report-export.spec.ts`) — 1V
 
