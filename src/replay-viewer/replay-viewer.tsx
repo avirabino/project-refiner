@@ -26,7 +26,7 @@ type RrwebPlayerCtor = new (opts: { target: HTMLElement; props: Record<string, u
 
 const SPEEDS = [1, 2, 4, 8];
 
-type LogEvent = { id: string; type: 'bug' | 'screenshot' | 'action' | 'feature'; label: string; timestamp: number; };
+type LogEvent = { id: string; type: 'bug' | 'screenshot' | 'action' | 'feature'; label: string; timestamp: number; detail: Record<string, unknown>; };
 const LOG_ICONS: Record<LogEvent['type'], string> = { bug: '🐛', screenshot: '📷', action: '🖱', feature: '✨' };
 
 function fmtMs(ms: number): string {
@@ -53,6 +53,8 @@ function ReplayViewer() {
   const [currentMs, setCurrentMs] = useState(0);
   const [totalMs, setTotalMs] = useState(0);
   const [logEvents, setLogEvents] = useState<LogEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<LogEvent | null>(null);
+  const [hoveredLogId, setHoveredLogId] = useState<string | null>(null);
 
   // Ref-based current position for handlers (avoids stale closure)
   const currentMsRef = useRef(0);
@@ -74,10 +76,14 @@ function ReplayViewer() {
           getFeaturesBySession(sessionId),
         ]);
         const log: LogEvent[] = [
-          ...bugs.map((b: Bug) => ({ id: b.id, type: 'bug' as const, label: b.title || b.description || 'Bug', timestamp: b.timestamp })),
-          ...screenshots.map((sc: Screenshot) => ({ id: sc.id, type: 'screenshot' as const, label: `Screenshot (${sc.url.replace(/.*\//, '') || 'page'})`, timestamp: sc.timestamp })),
-          ...actions.map((a: Action) => ({ id: a.id, type: 'action' as const, label: `${a.type}${a.value ? ': ' + String(a.value).slice(0, 30) : ''}`, timestamp: a.timestamp })),
-          ...features.map((f: Feature) => ({ id: f.id, type: 'feature' as const, label: f.title || f.description || 'Feature', timestamp: f.timestamp })),
+          ...bugs.map((b: Bug) => ({ id: b.id, type: 'bug' as const, label: b.title || b.description || 'Bug', timestamp: b.timestamp,
+            detail: { title: b.title, description: b.description, priority: b.priority, status: b.status, url: b.url } })),
+          ...screenshots.map((sc: Screenshot) => ({ id: sc.id, type: 'screenshot' as const, label: `Screenshot (${sc.url.replace(/.*\//, '') || 'page'})`, timestamp: sc.timestamp,
+            detail: { url: sc.url, dimensions: `${sc.width}×${sc.height}`, dataUrl: sc.dataUrl } })),
+          ...actions.map((a: Action) => ({ id: a.id, type: 'action' as const, label: `${a.type}${a.value ? ': ' + String(a.value).slice(0, 30) : ''}`, timestamp: a.timestamp,
+            detail: { type: a.type, value: a.value ?? '', page: a.pageUrl, selector: a.selector ?? '', note: a.note ?? '' } })),
+          ...features.map((f: Feature) => ({ id: f.id, type: 'feature' as const, label: f.title || f.description || 'Feature', timestamp: f.timestamp,
+            detail: { title: f.title, description: f.description, url: f.url } })),
         ].sort((a, b) => a.timestamp - b.timestamp);
         setLogEvents(log);
         setSession(s);
@@ -250,25 +256,26 @@ function ReplayViewer() {
 
         {/* Event log panel */}
         {logEvents.length > 0 && (
-          <div style={{ width: 260, flexShrink: 0, background: '#1e293b', borderLeft: '1px solid #334155', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '8px 12px', borderBottom: '1px solid #334155', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ width: 268, flexShrink: 0, background: '#0f172a', borderLeft: '1px solid #334155', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid #334155', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', background: '#1e293b' }}>
               Event Log · {logEvents.length}
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {logEvents.map(ev => {
                 const offset = metaStartRef.current > 0 ? Math.max(0, ev.timestamp - metaStartRef.current) : 0;
                 const isActive = metaStartRef.current > 0 && currentMs >= offset && currentMs < offset + 2000;
+                const isHovered = hoveredLogId === ev.id;
+                const bg = isActive ? '#312e81' : isHovered ? '#1e293b' : 'transparent';
                 return (
-                  <div key={ev.id} onClick={() => {
-                    const o = metaStartRef.current > 0 ? Math.max(0, ev.timestamp - metaStartRef.current) : 0;
-                    currentMsRef.current = o; setCurrentMs(o);
-                    if (isPlayingRef.current) replayerRef.current?.play(o); else replayerRef.current?.pause(o);
-                  }}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #1e293b', background: isActive ? '#312e81' : 'transparent', transition: 'background 0.1s' }}>
+                  <div key={ev.id}
+                    onMouseEnter={() => setHoveredLogId(ev.id)}
+                    onMouseLeave={() => setHoveredLogId(null)}
+                    onClick={() => setSelectedEvent(ev)}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #1e3a5f22', background: bg, transition: 'background 0.1s' }}>
                     <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{LOG_ICONS[ev.type]}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.label}</p>
-                      <p style={{ margin: 0, fontSize: 10, color: '#64748b', marginTop: 1 }}>{metaStartRef.current > 0 ? fmtMs(offset) : '--:--'}</p>
+                      <p style={{ margin: 0, fontSize: 10, color: '#475569', marginTop: 2 }}>{metaStartRef.current > 0 ? fmtMs(offset) : '--:--'}</p>
                     </div>
                   </div>
                 );
@@ -307,6 +314,68 @@ function ReplayViewer() {
                   ×{s}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Event detail popup ── */}
+      {selectedEvent && (
+        <div
+          onClick={() => setSelectedEvent(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', maxWidth: '88vw', maxHeight: '88vh', overflow: 'auto', minWidth: 340, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+          >
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', borderBottom: '1px solid #334155', background: '#0f172a', borderRadius: '12px 12px 0 0' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>{LOG_ICONS[selectedEvent.type]}</span>
+                <span style={{ textTransform: 'capitalize' }}>{selectedEvent.type}</span>
+                <span style={{ color: '#64748b', fontWeight: 400 }}>—</span>
+                <span style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#e2e8f0', fontWeight: 500 }}>{selectedEvent.label}</span>
+              </span>
+              <button onClick={() => setSelectedEvent(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>✕</button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ padding: 18 }}>
+              {selectedEvent.type === 'screenshot' ? (
+                <img
+                  src={selectedEvent.detail.dataUrl as string}
+                  alt="Screenshot"
+                  style={{ maxWidth: '80vw', maxHeight: '68vh', borderRadius: 8, display: 'block', border: '1px solid #334155' }}
+                />
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {Object.entries(selectedEvent.detail)
+                      .filter(([k, v]) => k !== 'dataUrl' && v != null && v !== '')
+                      .map(([k, v]) => (
+                        <tr key={k} style={{ borderBottom: '1px solid #1e3a5f33' }}>
+                          <td style={{ padding: '6px 10px 6px 0', fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', verticalAlign: 'top', textTransform: 'capitalize', width: 90 }}>{k}</td>
+                          <td style={{ padding: '6px 0', fontSize: 12, color: '#e2e8f0', wordBreak: 'break-word' }}>{String(v)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* Jump to button */}
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    const o = metaStartRef.current > 0 ? Math.max(0, selectedEvent.timestamp - metaStartRef.current) : 0;
+                    currentMsRef.current = o; setCurrentMs(o);
+                    if (isPlayingRef.current) replayerRef.current?.play(o); else replayerRef.current?.pause(o);
+                    setSelectedEvent(null);
+                  }}
+                  style={{ background: '#6366f1', color: '#f1f5f9', border: 'none', borderRadius: 6, padding: '7px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  ▶ Jump to {metaStartRef.current > 0 ? fmtMs(Math.max(0, selectedEvent.timestamp - metaStartRef.current)) : '--:--'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
