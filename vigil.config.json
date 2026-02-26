@@ -1,0 +1,9 @@
+{
+  "_comment": "Vigil per-project config. Committed to Git. No secrets here — use env vars.",
+  "projectId": "my-project",
+  "sprintCurrent": "06",
+  "serverPort": 7474,
+  "maxFixIterations": 3,
+  "llmMode": "mock",
+  "agentsApiUrl": "http://localhost:8000"
+}

@@ -1,41 +1,90 @@
-# 10 — Module Agent Permissions (Refine)
+# 10 — Module Agent Permissions (Vigil)
 
-Purpose: make module-agent autonomy explicit.
+Purpose: make module-agent autonomy explicit. Prevents agents from stalling by being clear about what they can do without asking.
 
-## Module ownership
+---
 
-| Module | Path | Tag | Role Instance |
-|--------|------|-----|---------------|
-| Background | `src/background/` | `[DEV:background]` | `@role_extension_dev` |
-| Content | `src/content/` | `[DEV:content]` | `@role_extension_dev` |
-| Popup | `src/popup/` | `[DEV:popup]` | `@role_extension_dev` |
-| Core | `src/core/` | `[DEV:core]` | `@role_extension_dev` |
-| Shared | `src/shared/` | `[DEV:shared]` | `@role_extension_dev` |
+## Module Ownership
 
-## What module agents MAY do without asking
+| Module | Path | Tag | Role Instance | Tier |
+|---|---|---|---|---|
+| ext-background | `src/background/` | `[DEV:ext]` | `@role_extension_dev` | Tier-3 |
+| ext-content | `src/content/` | `[DEV:ext]` | `@role_extension_dev` | Tier-3 |
+| ext-popup | `src/popup/` | `[DEV:ext]` | `@role_extension_dev` | Tier-3 |
+| ext-core | `src/core/` | `[DEV:ext]` | `@role_extension_dev` | Tier-3 |
+| ext-shared | `src/shared/` | `[DEV:ext]` | `@role_extension_dev` | Tier-3 |
+| vigil-server | `packages/server/` | `[DEV:server]` | `@role_server_dev` | Tier-3 |
+| dashboard | `packages/dashboard/` | `[DEV:dashboard]` | `@role_server_dev` | Tier-3 |
+| e2e-regression | `tests/e2e/` | `[QA]` | `@role_qa` | Tier-3 |
 
-- Implement inside module scope per module's AGENTS.md
-- Create/extend tests inside `tests/unit/<module>/` or `tests/integration/`
-- Update module AGENTS.md
-- Update sprint artifacts: `docs/sprints/**` (todo/report/DR)
-- Update `docs/0l_DECISIONS.md` (decisions tied to their work)
-- Update `docs/03_MODULES.md` (when capabilities change)
+---
+
+## What Module Agents MAY Do Without Asking
+
+**All module agents** (within their module scope):
+- Implement and refactor inside their assigned module path
+- Create/extend unit and integration tests under `tests/unit/` or `tests/integration/`
+- Update their module's `AGENTS.md`
+- Update sprint artifacts: `docs/sprints/**` (todos, reports, DRs, decisions)
+- Update `docs/0l_DECISIONS.md` for decisions tied to their work
+- Update `docs/03_MODULES.md` when their capabilities change
 - Update `package.json` for small, standard dependencies required by their module
 
-## What module agents MUST NOT do without escalation
+**`[DEV:ext]` additionally may:**
+- Update `src/shared/types.ts` for extension-internal type changes
+- Update `manifest.json` for permission changes within existing scope
 
-Raise a **FLAG** and escalate to `[CTO]` before:
+**`[DEV:server]` additionally may:**
+- Write to `docs/sprints/sprint_XX/BUGS/` and `FEATURES/` (this is the server's job)
+- Update `.vigil/bugs.counter` and `.vigil/features.counter`
+- Update `vigil.config.json` schema documentation (not values)
+- Add MCP tools to `packages/server/src/mcp/tools.ts`
 
-- Adding major new npm dependencies
-- Changing Chrome messaging protocol
-- Modifying `manifest.json` permissions
+**`[QA]` additionally may:**
+- Create `tests/e2e/regression/BUG-XXX.spec.ts` files
+- Move files to `tests/e2e/regression/ARCHIVE/` (archived regression tests)
+- Update `playwright.config.ts` for test timeout and reporter config (not port changes)
+- Update `demos/` apps
+
+---
+
+## What Module Agents MUST NOT Do Without Escalation
+
+**Escalate to `[CTO]` before:**
+- Changing `VIGILSession` schema in `src/shared/types.ts` (cross-module contract)
+- Changing the Chrome messaging protocol (cross-module contract)
+- Changing MCP tool signatures in `packages/server/src/mcp/tools.ts`
+- Changing the bug/feature file format (BUG-XXX.md template)
+- Modifying `manifest.json` permissions beyond current scope
 - Changing storage schema (Dexie migrations)
-- Implementing capabilities owned by other modules
-- Making breaking changes to `src/shared/` exports
-- Any work that affects multiple modules
+- Adding major new npm dependencies (framework, datastore, orchestration)
+- Cross-module implementation (writing in another module's path)
+- Changing vigil-server port (currently 7474)
+- Adding AGENTS API calls to vigil-server before Sprint 07 is scoped
 
-## If asked to work outside scope
+**Escalate to `[FOUNDER]` before:**
+- Any of the CTO escalation items that involve architecture pivots
+- Enabling cloud mode (Vercel + Neon)
+- Changing autonomous agent branch strategy
+
+---
+
+## If Asked to Work Outside Scope
 
 1. Do NOT start work
-2. Raise a FLAG
-3. Suggest the correct module owner
+2. Raise a **FLAG** stating: current role, the out-of-scope request, and who the correct owner is
+3. Suggest the correct module owner's kickoff file
+
+---
+
+## Cross-Module Dependency Map
+
+```
+ext-shared   ← consumed by: ext-background, ext-content, ext-popup, ext-core
+vigil-server ← consumes: ext-shared (VIGILSession type, imported or duplicated)
+dashboard    ← consumes: vigil-server REST API (:7474/api/*)
+e2e-tests    ← consumes: ext (built dist/), vigil-server (:7474), target-app (:3847)
+AGENTS       ← consumed by: vigil-server (Sprint 07 only, via HTTP)
+```
+
+Any change to a producer's interface → FLAG all consumers.
