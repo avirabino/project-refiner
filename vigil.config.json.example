@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy this file to vigil.config.json and fill in your values. No secrets here — use env vars.",
+  "projectId": "your-project-name",
+  "sprintCurrent": "06",
+  "serverPort": 7474,
+  "maxFixIterations": 3,
+  "llmMode": "mock",
+  "agentsApiUrl": "http://localhost:8000"
+}

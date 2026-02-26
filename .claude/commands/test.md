@@ -1,55 +1,83 @@
-# /project:test — Run Full Test Suite
+# /project:test — Vigil Full Test Suite
 
-Run the complete test suite for the current project. This command is project-type aware.
+Run the complete Vigil test suite in the correct order with all prerequisites.
 
-## Steps
+## Prerequisites
 
-1. **Identify the project type** from the current working directory and CLAUDE.md.
-2. **Check if a dev server is required** (check CLAUDE.md `Start the Server` section).
-3. **Start the server if needed** — confirm it's running before proceeding.
-4. **Run tests in order:**
-   - Unit tests (fast feedback)
-   - Integration tests (requires services)
-   - E2E tests last (full system, real browser)
-5. **Report results** with pass/fail per layer, failures with file + line, server status.
-
-## Node/Next.js projects
 ```bash
-npm run test:unit          # Unit (Vitest)
-npm run type-check         # TypeScript
-npm run test:e2e           # E2E (Playwright, auto-starts server)
+# 1. Build the extension first (E2E requires built dist/)
+npm run build
+
+# 2. Start vigil-server (required for integration + E2E)
+npm run dev:server     # port 7474 — leave running in separate terminal
+
+# 3. Start QA target app (required for E2E)
+cd tests/fixtures/target-app && npm start   # port 3847
+
+# 4. Verify before running
+curl http://localhost:7474/health   # must return { status: "ok" }
 ```
 
-## Python/FastAPI projects
+## Run Commands
+
 ```bash
-pytest -m unit modules/    # Unit tests
-pytest -m integration      # Integration (requires services)
-NIGHTINGALE_ENV=testing poetry run python -m tests --level e2e
+# --- Unit + integration (no server required) ---
+npx vitest run                        # all unit + integration specs
+
+# --- Type check ---
+npx tsc --noEmit                      # must be clean before any "done" declaration
+
+# --- Lint ---
+npx eslint .                          # errors block, warnings OK
+
+# --- E2E (requires: dist/ + vigil-server + target app) ---
+npx playwright test                   # full suite
+npx playwright test tests/e2e/regression/   # regression gate only (fastest)
+npx playwright test --ui              # debug UI
+
+# --- Full suite shortcut ---
+npm run test:all
 ```
 
-## Output format
+## Output Format
 
 ```
-## Test Run — [PROJECT] — [DATE]
+## Test Run — Vigil — [DATE]
 
-Server status: ✅ Running on port XXXX | ❌ Not running (E2E skipped)
+### Pre-flight
+dist/ exists:             ✅ / ❌ (run npm run build)
+vigil-server healthy:     ✅ localhost:7474 / ❌ not running (E2E blocked)
+QA target app running:    ✅ localhost:3847 / ❌ not running (E2E blocked)
 
-### Unit Tests
+### Unit + Integration (Vitest)
 Result: ✅ XX passed / ❌ XX failed
-[failures if any — file:line:reason]
+[failures: file:line:reason]
 
-### Integration Tests
+### TypeScript
+Result: ✅ clean / ❌ [errors]
+
+### Lint
+Result: ✅ clean / ❌ [errors]
+
+### Regression Suite (Playwright)
+npx playwright test tests/e2e/regression/
 Result: ✅ XX passed / ❌ XX failed
+[failures: spec:line:reason]
 
-### E2E Tests
+### Full E2E Suite (Playwright)
 Result: ✅ XX passed / ❌ XX failed
 
 ### Overall Gate
-[ ] PASS — safe to mark feature done
-[ ] FAIL — do not mark done, fix failures first
+PASS — all layers green, safe to mark done
+FAIL — fix failures before declaring done (list below)
 ```
 
 ## Rules
-- NEVER skip a layer without explicit Avi approval
-- If server fails to start → report as test failure, do not proceed to E2E
-- Save screenshots to `tests/screenshots/` for all GUI flows
+
+- NEVER skip the regression suite — it is the mandatory first E2E gate
+- NEVER run E2E against stale `dist/` — always rebuild first if source changed
+- If vigil-server is not running → report as gate failure, do not skip E2E
+- If target app is not running → report as gate failure, do not skip E2E
+- Any regression failure → P0, blocks sprint closure
+- Save screenshots to `tests/screenshots/e2e_[timestamp]/` on failure
+- Full test suite must be green before any merge to main or sprint closure

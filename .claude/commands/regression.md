@@ -1,47 +1,77 @@
-# /project:regression — Pre-Merge Regression Gate
+# /project:regression — Vigil Pre-Merge Regression Gate
 
-Run before any merge to main or "done" declaration.
+Run before any merge to main, "done" declaration, or sprint closure.
 
 ## Steps
 
-1. **Confirm branch** — you're on the correct feature/sprint branch
-2. **Run full test suite** (same as /project:test)
-3. **Static checks:**
-   - TypeScript: `npm run type-check` (Node projects)
-   - Python types: `mypy .` (Python projects)
-   - Lint: `npm run lint` / `ruff check .`
-4. **Security scan:**
-   - `git grep -i "api_key\|secret\|password\|token" -- "*.ts" "*.py" "*.js" "*.tsx"`
-   - Confirm no `.env` files staged: `git status`
-5. **Check docs:** CLAUDE.md and module docs up to date if architecture changed
+1. **Confirm branch** — not on `main`. Autonomous agents must be on `vigil/fixes/sprint-XX`
+2. **Verify vigil-server** — `curl http://localhost:7474/health` → 200 (required for E2E)
+3. **Run regression suite first:**
+   ```bash
+   npx playwright test tests/e2e/regression/
+   ```
+   Any failure → **BLOCKED**. Do not proceed.
+4. **Run full test suite:**
+   ```bash
+   npx vitest run          # unit + integration
+   npx playwright test     # full E2E
+   ```
+5. **Static checks:**
+   ```bash
+   npx tsc --noEmit        # TypeScript — must be clean
+   npx eslint .            # Lint — errors block, warnings OK
+   ```
+6. **Security scan:**
+   ```bash
+   git grep -i "api_key\|secret\|password\|token" -- "*.ts" "*.tsx" "*.js" "*.json"
+   git status              # confirm no .env or .vigil/ files staged
+   ```
+7. **Check docs:** if architecture or commands changed → confirm `CLAUDE.md`, `docs/03_MODULES.md`, and relevant module `AGENTS.md` are updated
 
-## Regression Gate Checklist
+## Gate Checklist
 
 ```
-### Code Quality
-[ ] All unit tests pass
-[ ] All integration tests pass
-[ ] E2E smoke on critical paths pass
-[ ] TypeScript / Python type check: CLEAN
-[ ] Lint: CLEAN
+### Pre-flight
+[ ] Not on main branch
+[ ] vigil-server running: GET localhost:7474/health → 200
+[ ] dist/ is fresh (npm run build run after latest changes)
+
+### Regression Suite (mandatory first gate)
+[ ] npx playwright test tests/e2e/regression/ → ALL PASS
+    (any failure = BLOCKED, do not proceed)
+
+### Full Test Suite
+[ ] npx vitest run → all pass
+[ ] npx playwright test → all pass (no regressions)
+
+### Static Analysis
+[ ] npx tsc --noEmit → CLEAN
+[ ] npx eslint . → CLEAN (no errors)
 
 ### Security
-[ ] No hardcoded secrets (API keys, passwords, tokens)
-[ ] No .env files staged for commit
-[ ] Input validation on new external inputs
+[ ] No hardcoded secrets (api_key, secret, password, token)
+[ ] No .env files staged
+[ ] No .vigil/ runtime data staged (must be in .gitignore)
 
 ### Documentation
-[ ] CLAUDE.md updated if architecture or commands changed
-[ ] docs/03_MODULES.md updated if capabilities changed
-[ ] Module AGENTS.md updated if module behavior changed
+[ ] CLAUDE.md current (sprint number, commands)
+[ ] docs/03_MODULES.md current (no new capability undocumented)
+[ ] Module AGENTS.md current if module behavior changed
 
-### Gate decision
-[ ] PASS — safe to merge
-[ ] FAIL — [list every item that failed with file + line]
+### Gate
+[ ] PASS — safe to commit/merge
+[ ] FAIL — list every failing item with file + line
 ```
 
 ## Output
 
-State **PASS** or **FAIL** explicitly at the top.
-On FAIL: list every failing item with file + line number.
+State **PASS** or **FAIL** at the top of your response.
+On FAIL: list every failing item with file + line number + why it blocks.
 On PASS: print the full checklist with ✅ marks.
+
+## Rules
+
+- Regression suite failure = BLOCKED. No exceptions.
+- TypeScript errors = BLOCKED. Warnings = OK.
+- Security scan hit = BLOCKED. Investigate before proceeding.
+- Do NOT push to `main` — ever. This gate is for feature/sprint branches only.
