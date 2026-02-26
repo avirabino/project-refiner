@@ -47,16 +47,17 @@ Canonical file placement guide. Agents must check this before creating any new f
 
 | Command | Path | Who triggers |
 |---|---|---|
-| `/project:test` | `.claude/commands/test.md` | Any role |
-| `/project:e2e` | `.claude/commands/e2e.md` | `[QA]` |
-| `/project:plan` | `.claude/commands/plan.md` | Any role |
-| `/project:regression` | `.claude/commands/regression.md` | `[QA]` / `[CTO]` |
+| `/project:cpto` | `.claude/commands/cpto.md` | `[CPTO]` — session startup |
+| `/project:sprint-plan` | `.claude/commands/sprint-plan.md` | `[CPTO]` |
+| `/project:sprint-report` | `.claude/commands/sprint-report.md` | `[CPTO]` |
 | `/project:release-gate` | `.claude/commands/release-gate.md` | `[CPTO]` / `[CTO]` |
-| `/project:sprint-plan` | `.claude/commands/sprint-plan.md` | `[CPTO]` / `[CTO]` |
-| `/project:sprint-report` | `.claude/commands/sprint-report.md` | `[CPTO]` / `[CTO]` |
-| `/project:bug-log` | `.claude/commands/bug-log.md` | Any role |
-| `/project:bug-fix` | `.claude/commands/bug-fix.md` | `[DEV:*]` / `[CPTO]` |
 | `/project:bug-review` | `.claude/commands/bug-review.md` | `[CPTO]` / `[QA]` |
+| `/project:bug-log` | `.claude/commands/bug-log.md` | Any role |
+| `/project:bug-fix` | `.claude/commands/bug-fix.md` | `[DEV:*]` |
+| `/project:plan` | `.claude/commands/plan.md` | Any role |
+| `/project:test` | `.claude/commands/test.md` | `[DEV:*]` / `[QA]` |
+| `/project:e2e` | `.claude/commands/e2e.md` | `[QA]` |
+| `/project:regression` | `.claude/commands/regression.md` | `[QA]` / `[DEV:*]` |
 
 ---
 

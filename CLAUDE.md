@@ -145,17 +145,19 @@ Status: ⬜ | 🔴 | 🟢
 
 ## 7. Custom Claude Code Commands
 
-| Command | Purpose |
-|---|---|
-| `/project:test` | Full test suite |
-| `/project:e2e` | Playwright E2E only |
-| `/project:plan` | Force plan mode |
-| `/project:regression` | Pre-merge regression gate |
-| `/project:release-gate` | Pre-prod checklist |
-| `/project:sprint-report` | Sprint status |
-| `/project:bug-log` | Log a new bug or feature |
-| `/project:bug-fix` | Red→green resolution loop |
-| `/project:bug-review` | Sprint closure gate |
+| Command | Purpose | Who runs it |
+|---|---|---|
+| `/project:cpto` | **Activate CPTO session** — load context, orient, show menu | `[CPTO]` |
+| `/project:sprint-plan` | Plan next sprint scope + produce all artifacts | `[CPTO]` |
+| `/project:sprint-report` | Current sprint status report | `[CPTO]` |
+| `/project:release-gate` | Pre-release / sprint closure checklist | `[CPTO]` |
+| `/project:bug-review` | Sprint closure bug gate | `[CPTO]` / `[QA]` |
+| `/project:bug-log` | Log a new bug or feature | Any |
+| `/project:bug-fix` | Red→green resolution loop | `[DEV:*]` |
+| `/project:plan` | Force plan mode before complex tasks | Any |
+| `/project:test` | Full test suite | `[DEV:*]` / `[QA]` |
+| `/project:e2e` | Playwright E2E only | `[QA]` |
+| `/project:regression` | Pre-merge regression gate | `[QA]` / `[DEV:*]` |
 
 ---
 
@@ -180,6 +182,7 @@ FEATURE IS "DONE" ONLY WHEN:
 | Tag | Scope |
 |---|---|
 | `[FOUNDER]` | Avi — final decision maker |
+| `[CPTO]` | **Technical PM** — sprint lifecycle, team management, design reviews, decisions. Invoke: `/project:cpto` |
 | `[CTO]` | Architecture, contracts, tech debt |
 | `[CPO]` | Product scope, AC, sprint planning |
 | `[DEV:ext]` | Chrome extension implementation |
