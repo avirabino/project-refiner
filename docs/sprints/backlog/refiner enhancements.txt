@@ -1,3 +1,4 @@
+--- 26-02-2026
 Regarding discovery - I am not sure that I agree :
 
 (1) Auto discovery by the dev tools during testing +AUTO resolved - this works since the tests are run again and the loop test->fix->test... resolved is good. But this is initiated and resolved by the DEV AGENT

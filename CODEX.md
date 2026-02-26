@@ -1,7 +1,8 @@
-# vigil — Project CODEX
+# Vigil — Project CODEX
 
 > **Audience:** Dev team + AI agents (internal)
 > **Level:** Project — Bug Discovery & Resolution Platform
+> **Reading order:** After workspace CODEX.md. Before docs/00_INDEX.md.
 
 ---
 
@@ -10,68 +11,143 @@
 | Field | Value |
 |---|---|
 | **Name** | SynaptixLabs Vigil |
-| **Purpose** | Chrome Extension for manual acceptance test recording with Playwright export |
+| **Purpose** | Chrome Extension captures bugs/sessions → vigil-server writes to filesystem → Claude Code resolves via MCP |
 | **Repo path** | `C:\Synaptix-Labs\projects\vigil` |
-| **Stack** | Chrome Ext (MV3) · React 18 · Vite · CRXJS · rrweb · Dexie.js |
-| **Deploy** | Local unpacked extension (no server) |
-| **Status** | 🟡 Sprint 00 — Paused |
+| **GitHub** | `https://github.com/avirabino/vigil` |
+| **Stack** | Chrome Ext (MV3) · React 18 · Vite · CRXJS · rrweb · Dexie.js · Node.js + Express (server) · MCP SDK · React (dashboard) |
+| **LLM platform** | AGENTS project (`localhost:8000`) — Sprint 07+ |
+| **Deploy** | Unpacked extension + vigil-server (local) + Vercel (cloud, Sprint 07) |
+| **Version** | 2.0.0 (Sprint 06 target) |
 
 ---
 
-## 2. Current State
+## 2. Sprint Status
 
 | Sprint | Status | Goal |
 |---|---|---|
-| **Sprint 00** | 🟡 Active/Paused | Scaffold, hello-world ext, Vitest + Playwright infra |
-
-**Port map:** 3847 (QA target), 3900 (demo app), 5173 (Vite HMR)
+| sprint_00–05 | ✅ Closed | Scaffold → session model → reporter → CI |
+| **sprint_06** | 🟢 ACTIVE | vigil-server + MCP + session refactor + dashboard + resolution commands |
+| sprint_07 | 📐 Planned | Agentic BE — AGENTS LLM integration + vigil_agent |
 
 ---
 
-## 3. Commands
+## 3. Port Map
+
+| Port | Service | Notes |
+|---|---|---|
+| **7474** | vigil-server | MCP + REST + dashboard |
+| 3847 | QA target app | Playwright E2E target |
+| 3900 | Demo app (TaskPilot) | Manual acceptance demo |
+| 5173 | Vite HMR | Extension dev |
+| 8000 | AGENTS FastAPI | Sprint 07+ only |
+
+---
+
+## 4. Module Registry (check before building)
+
+| Module | Path | Tag | Owns |
+|---|---|---|---|
+| Extension background | `src/background/` | `[DEV:ext]` | Service worker, session lifecycle, POST to server |
+| Extension content | `src/content/` | `[DEV:ext]` | rrweb, control bar, bug editor, Shadow DOM |
+| Extension popup | `src/popup/` | `[DEV:ext]` | Popup UI, session list |
+| Extension core | `src/core/` | `[DEV:ext]` | IndexedDB (Dexie), storage, codegen |
+| Extension shared | `src/shared/` | `[DEV:ext]` | Types, constants, message protocol |
+| vigil-server | `packages/server/` | `[DEV:server]` | Express API, MCP tools, filesystem writer/reader |
+| Dashboard | `packages/dashboard/` | `[DEV:dashboard]` | React SPA, bug/feature lists, sprint selector |
+| E2E + regression | `tests/e2e/` | `[QA]` | Playwright tests, regression suite |
+
+---
+
+## 5. Key Interfaces (do not break without FLAG)
+
+```typescript
+// Session payload: extension → vigil-server
+POST /api/session  body: VIGILSession
+
+// MCP tools: Claude Code → vigil-server
+vigil_list_bugs(sprint?, status?)
+vigil_get_bug(bug_id)
+vigil_update_bug(bug_id, fields)
+vigil_close_bug(bug_id, resolution, keep_test)
+vigil_list_features(sprint?, status?)
+vigil_get_feature(feat_id)
+
+// LLM bridge: vigil-server → AGENTS (Sprint 07)
+POST /api/v1/vigil/suggest  body: { type, context }
+```
+
+---
+
+## 6. Commands
 
 ```bash
-npm run dev          # Watch mode build
-npm run build        # Production build → dist/
-npx tsc --noEmit     # Type check
-npx vitest run       # Unit tests
-npx playwright test  # E2E (requires built dist/)
-npm run test:all     # Unit + E2E
-```
+# Extension
+npm run dev            # Watch build
+npm run build          # Production → dist/
 
-Load extension: `chrome://extensions` → Developer mode → Load unpacked → select `dist/`
+# Server (Sprint 06)
+npm run dev:server     # Port 7474 (nodemon)
+npm run build:server
 
----
+# Dashboard
+npm run dev:dashboard
 
-## 4. Architecture Non-Negotiables
+# Tests
+npx vitest run         # Unit + integration
+npx playwright test    # E2E
+npm run test:all       # Full suite
 
-- Chrome Manifest V3 only — no V2 APIs
-- Shadow DOM for all injected UI
-- rrweb for recording — do NOT build custom DOM capture
-- IndexedDB via Dexie.js — no server/API
-- Fully offline/client-side — no network requests
-- Vite + CRXJS — do NOT switch bundlers
-
----
-
-## 5. Project Structure
-
-```
-src/
-├── background/    # Service worker
-├── content/       # Content script (rrweb, control bar)
-├── popup/         # Extension popup
-├── core/          # Business logic (storage, codegen)
-└── shared/        # Types, constants, message protocol
-tests/
-├── unit/          # Vitest
-├── integration/   # Vitest
-└── e2e/           # Playwright
-demos/
-└── refine-demo-app/   # Manual acceptance demo (port 3900)
-ARCHIVE/               # Deprecated code, old sprint artifacts
+# Checks
+npx tsc --noEmit
+npx eslint .
 ```
 
 ---
 
-*Last updated: 2026-02-24 | Owner: [CTO] + [FOUNDER]*
+## 7. vigil.config.json
+
+Per-project config (committed, no secrets):
+
+```json
+{
+  "projectId": "my-project",
+  "sprintCurrent": "06",
+  "serverPort": 7474,
+  "maxFixIterations": 3,
+  "llmMode": "mock",
+  "agentsApiUrl": "http://localhost:8000"
+}
+```
+
+API keys via env vars only: `VIGIL_AGENTS_API_KEY`.
+
+---
+
+## 8. Architecture Non-Negotiables
+
+- Chrome Manifest V3 only
+- Shadow DOM for ALL injected extension UI
+- rrweb for recording (not custom)
+- Dexie.js for extension IndexedDB
+- vigil-server owns filesystem writes (extension has no `fs` access)
+- AGENTS `llm_core` owns all LLM inference (vigil-server is consumer only)
+- `vigil_agent` commits to `vigil/fixes/sprint-XX` branch only — never to `main`
+- All secrets via env vars
+
+---
+
+## 9. Decisions Log
+
+`docs/0l_DECISIONS.md` — CTO + FOUNDER own.
+
+Key decisions (Sprint 06):
+- S06-D001: vigil-server on port 7474
+- S06-D002: Session = container, recording = opt-in
+- S06-D003: Git-native filesystem storage (no DB in Sprint 06)
+- S06-D005: `VIGIL_LLM_MODE=mock` in Sprint 06
+
+See full log: `docs/sprints/sprint_06/sprint_06_decisions_log.md`
+
+---
+
+*Last updated: 2026-02-26 | Owner: [CTO] + [FOUNDER]*

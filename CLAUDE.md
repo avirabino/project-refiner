@@ -1,9 +1,9 @@
 # SynaptixLabs Vigil — Claude Code Project Context
 
-> **Stack:** Chrome Extension (Manifest V3) + React 18 + Tailwind + Vite + CRXJS + rrweb + Dexie.js
-> **Template version:** SynaptixLabs Windsurf-Projects-Template
+> **Stack:** Chrome Extension (MV3) + React 18 + Vite + CRXJS + rrweb + Dexie.js + Node.js vigil-server (Express + MCP) + React dashboard
+> **Template version:** SynaptixLabs Windsurf-Projects-Template v2
 >
-> Auto-loaded by Claude Code CLI. Keep current.
+> Auto-loaded by Claude Code CLI. Keep current. Read CODEX.md next.
 
 ---
 
@@ -11,41 +11,155 @@
 
 | Field | Value |
 |---|---|
-| **Name** | SynaptixLabs Vigil (Bug Discovery & Resolution Platform) |
-| **Purpose** | Chrome Extension for manual acceptance test recording with Playwright export |
+| **Name** | SynaptixLabs Vigil |
+| **Purpose** | Bug Discovery & Resolution Platform — Chrome Extension capture → vigil-server → Claude Code resolution loop |
 | **Repo path** | `C:\Synaptix-Labs\projects\vigil` |
-| **Production URL** | N/A (local unpacked extension) |
-| **Current sprint** | sprint_00 |
-| **Dev port** | N/A (extension, not server) |
+| **GitHub** | `https://github.com/avirabino/vigil` |
+| **Current sprint** | sprint_06 |
+| **Sprint index** | `docs/sprints/sprint_06/sprint_06_index.md` |
 
 ---
 
-## 2. Key Commands
+## 2. Architecture (Sprint 06+)
 
-```bash
-npm run dev          # Watch mode build
-npm run build        # Production build → dist/
-npx tsc --noEmit     # Type check
-npx eslint .         # Lint
+```
+vigil-ext  (Chrome Extension, port N/A)
+  └── Session → snapshots, recordings, bugs, features
+  └── END SESSION → POST localhost:7474/api/session
 
-# Unit + Integration testing (DEV owns)
-npx vitest           # Unit tests (watch)
-npx vitest run       # Unit tests (single run)
-npx vitest run --coverage  # With coverage
+vigil-server  (Node.js Express + MCP, port 7474)
+  ├── Receives sessions, writes to filesystem
+  ├── Exposes MCP tools to Claude Code
+  ├── Serves management dashboard at /dashboard
+  └── VIGIL_LLM_MODE=mock (live in Sprint 07 via AGENTS)
 
-# E2E testing (QA owns)
-npx playwright test  # E2E tests (headed, requires built dist/)
-npx playwright test --ui  # E2E with debug UI
+AGENTS platform  (Python FastAPI, port 8000)
+  └── Sprint 07: POST /api/v1/vigil/suggest → Groq llm_core
 
-# Full suite
-npm run test:all     # Unit + E2E combined
+Claude Code  (.claude/commands/)
+  └── /project:bug-log, /project:bug-fix, /project:bug-review
 ```
 
-> Load `dist/` as unpacked extension: `chrome://extensions` → Developer mode → Load unpacked
+---
+
+## 3. Key Commands
+
+```bash
+# Extension
+npm run dev            # Watch build (CRXJS)
+npm run build          # Production build → dist/
+
+# vigil-server (Sprint 06)
+npm run dev:server     # nodemon on port 7474
+npm run build:server   # production build
+
+# Dashboard (Sprint 06)
+npm run dev:dashboard  # Vite dev server for React dashboard
+
+# Tests
+npx vitest run         # Unit + integration (Vitest)
+npx playwright test    # E2E (requires built dist/)
+npm run test:all       # Full suite
+
+# Type check + lint
+npx tsc --noEmit
+npx eslint .
+```
+
+Load extension: `chrome://extensions` → Developer mode → Load unpacked → `dist/`
 
 ---
 
-## 3. Testing Rules (non-negotiable gates)
+## 4. Port Map
+
+| Port | Service |
+|---|---|
+| 7474 | vigil-server (MCP + REST + dashboard) |
+| 3847 | QA target app |
+| 3900 | Demo app (TaskPilot) |
+| 5173 | Vite HMR (extension dev) |
+| 8000 | AGENTS FastAPI (Sprint 07+) |
+
+---
+
+## 5. Project Structure
+
+```
+src/                     # Chrome Extension source
+├── background/          # Service worker (session, messaging, POST)
+├── content/             # Content script (rrweb, control bar, bug editor)
+├── popup/               # Extension popup
+├── core/                # Business logic (storage, reports)
+└── shared/              # Types, constants, protocol
+
+packages/                # Sprint 06 — new packages
+├── server/              # vigil-server (Express + MCP)
+│   ├── src/
+│   │   ├── routes/      # /api/session, /api/bugs, /api/vigil/suggest
+│   │   ├── mcp/         # MCP tool definitions
+│   │   ├── filesystem/  # writer, reader, counter
+│   │   └── config.ts    # reads vigil.config.json
+│   └── public/          # dashboard build output
+└── dashboard/           # React dashboard (Vite)
+
+tests/
+├── unit/
+├── integration/
+└── e2e/
+    └── regression/      # BUG-XXX.spec.ts files
+
+docs/
+├── 00_INDEX.md
+├── 0k_PRD.md            # CPO owns
+├── 01_ARCHITECTURE.md   # CTO owns
+├── 03_MODULES.md        # module registry
+├── 0l_DECISIONS.md      # decisions log
+└── sprints/
+    ├── sprint_06/        # ACTIVE
+    └── sprint_07/        # PLANNED (agentic BE)
+
+vigil.config.json        # per-project config (no secrets)
+.vigil/                  # runtime data (gitignored)
+  sessions/
+  bugs.counter
+```
+
+---
+
+## 6. Vigil Bug/Feature File Format
+
+```markdown
+# BUG-XXX — [description]
+## Status: OPEN | FIXED
+## Severity: P0 | P1 | P2 | P3
+## Sprint: XX
+## Discovered: [date] via [manual | vigil-session: ID]
+## Steps to Reproduce / Expected / Actual
+## Regression Test
+File: tests/e2e/regression/BUG-XXX.spec.ts
+Status: ⬜ | 🔴 | 🟢
+## Fix / Resolution / Test Decision
+```
+
+---
+
+## 7. Custom Claude Code Commands
+
+| Command | Purpose |
+|---|---|
+| `/project:test` | Full test suite |
+| `/project:e2e` | Playwright E2E only |
+| `/project:plan` | Force plan mode |
+| `/project:regression` | Pre-merge regression gate |
+| `/project:release-gate` | Pre-prod checklist |
+| `/project:sprint-report` | Sprint status |
+| `/project:bug-log` | Log a new bug or feature |
+| `/project:bug-fix` | Red→green resolution loop |
+| `/project:bug-review` | Sprint closure gate |
+
+---
+
+## 8. Testing Gates (non-negotiable)
 
 ```
 FEATURE IS "DONE" ONLY WHEN:
@@ -53,89 +167,39 @@ FEATURE IS "DONE" ONLY WHEN:
   ✅ TypeScript clean (tsc --noEmit)
   ✅ Build succeeds (npm run build)
   ✅ Extension loads in Chrome without errors
-  ✅ Manual smoke test on target flow
+  ✅ vigil-server health check passes (GET /health → 200)
+  ✅ Regression tests green for any bug fix
   ✅ No regressions on full suite
   ✅ Avi sign-off
 ```
 
 ---
 
-## 4. Project Structure
+## 9. Role Tags
 
-```
-src/
-├── background/    # Service worker (session lifecycle, messaging)
-├── content/       # Content script (rrweb, control bar, bug editor)
-├── popup/         # Extension popup (session list, management)
-├── core/          # Business logic (storage, reports, codegen)
-└── shared/        # Types, constants, message protocol
-tests/
-├── unit/          # Unit tests (Vitest) — DEV owns
-├── integration/   # Integration tests (Vitest) — DEV owns
-├── e2e/           # E2E tests (Playwright) — QA owns
-│   └── fixtures/  # Extension test fixture
-└── fixtures/
-    └── target-app/  # QA regression target (port 3847)
-demos/
-└── refine-demo-app/ # Manual acceptance demo "TaskPilot" (port 3900)
-dist/              # Build output
-manifest.json      # Manifest V3
-```
-
----
-
-## 5. Architecture Non-Negotiables
-
-- Chrome Manifest V3 — no V2 APIs
-- Shadow DOM for all injected UI (control bar, bug editor)
-- rrweb for recording — do NOT build custom DOM recording
-- IndexedDB via Dexie.js — do NOT add server/API
-- Vite + CRXJS — do NOT switch to Webpack/Plasmo
-- No network requests — fully offline/client-side
-
----
-
-## 6. Sprint Context
-
-| Sprint | Status | Key deliverables |
-|---|---|---|
-| sprint_00 | 🟢 Active | Repo setup, scaffold, hello-world extension, Vitest + Playwright infra |
-
-**Port map:** 3847 (QA target), 3900 (demo app), 5173 (Vite HMR)
-**Kickoff:** `docs/sprints/sprint_00/sprint_00_kickoff.md`
-
----
-
-## 7. Role Tags
-
-| Tag | Who |
+| Tag | Scope |
 |---|---|
 | `[FOUNDER]` | Avi — final decision maker |
-| `[CTO]` | Architecture, tech debt, build pipeline |
-| `[CPO]` | Product scope, acceptance criteria |
-| `[DEV:<module>]` | Module implementation (background/content/popup/core/shared) |
+| `[CTO]` | Architecture, contracts, tech debt |
+| `[CPO]` | Product scope, AC, sprint planning |
+| `[DEV:ext]` | Chrome extension implementation |
+| `[DEV:server]` | vigil-server + MCP tools |
+| `[DEV:dashboard]` | React management dashboard |
+| `[QA]` | E2E, regression, fixtures |
 
-> Reading order: nearest `AGENTS.md` → root `AGENTS.md` → `docs/00_INDEX.md`
-
----
-
-## 8. Custom Commands
-
-| Command | Purpose |
-|---|---|
-| `/project:test` | Run full test suite |
-| `/project:plan` | Force plan mode before complex work |
-| `/project:regression` | Pre-merge gate |
-| `/project:release-gate` | Pre-prod checklist |
-| `/project:sprint-report` | Current sprint status |
+Reading order: `AGENTS.md` → `CODEX.md` → `docs/00_INDEX.md` → current sprint index
 
 ---
 
-## 9. What NOT to Do
+## 10. Hard Rules
 
-- Do NOT add server/API components — fully client-side
-- Do NOT submit to Chrome Web Store — unpacked only
-- Do NOT inject CSS into target app — Shadow DOM only
-- Do NOT silently expand scope
-- Do NOT add new infra dependencies without a FLAG
-- Do NOT build custom DOM recording — use rrweb
+- Chrome Manifest V3 only — no V2 APIs
+- Shadow DOM for ALL injected UI (zero CSS leakage)
+- rrweb for recording — do NOT build custom DOM capture
+- IndexedDB via Dexie.js for extension-side storage
+- vigil-server for filesystem writes — extension has no fs access
+- AGENTS platform for LLM — vigil-server never owns LLM logic
+- All API keys in env vars only — never in vigil.config.json
+- vigil_agent never pushes to main — branch only
+
+*Last updated: 2026-02-26 | Owner: [CTO] + [FOUNDER]*
