@@ -27,30 +27,30 @@ vigil-ext  →  vigil-server (:7474)
 
 ## Scope
 
-| ID | Track | Deliverable | Cost |
-|---|---|---|---|
-| S07-01 | AGENTS | Add `/api/v1/vigil/suggest` endpoint to AGENTS project | ~4V |
-| S07-02 | AGENTS | `llm_core` prompt templates for bug auto-complete + similarity | ~3V |
-| S07-03 | AGENTS | `resource_manager` Vigil usage tracking (project_id=vigil) | ~2V |
-| S07-04 | SERVER | Flip `VIGIL_LLM_MODE=live`, wire vigil-server → AGENTS API | ~2V |
-| S07-05 | SERVER | Returning bug detection: semantic similarity on new bug receipt | ~3V |
-| S07-06 | EXT | Bug auto-complete in editor (title + steps pre-fill from LLM) | ~3V |
-| S07-07 | SERVER | Severity auto-suggest (confidence score shown, user overrides) | ~2V |
-| S07-08a | AGENT | `vigil_agent` scaffold: `/project:vigil-agent` command + config (max time, cost, dry-run) | ~1V |
-| S07-08b | AGENT | Bug analysis + classification (reproducible / needs-info / code-defect / UX-issue) | ~1.5V |
-| S07-08c | AGENT | Regression test generation + red confirmation | ~1.5V |
-| S07-08d | AGENT | Fix implementation + green confirmation + git commit to branch | ~1V |
-| S07-09 | AGENT | Sprint health report (LLM-generated summary of open bugs + risk) | ~2V |
-| S07-10 | QA | Integration tests: ext → server → AGENTS round-trip | ~2V |
-| S07-11 | SERVER | Shared types package (`packages/shared/`) — single source for ext + server + AGENTS types | ~2V |
-| S07-12 | EXT | VIGILSession persistence via `chrome.storage.local` (service worker restart-safe) | ~1.5V |
-| S07-13 | DASHBOARD | Dashboard vitest config + component tests | ~1V |
-| S07-14 | INFRA | Vercel deployment: vigil-server (serverless) + dashboard (static) | ~2V |
-| S07-15 | SERVER | Neon PostgreSQL: migrate bug/feature storage from filesystem to managed Postgres | ~4V |
-| S07-16 | EXT | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V |
-| S07-17 | DASHBOARD | Dashboard overhaul: project/sprint/session nav, screenshots, timeline, replay | ~6V |
-| S07-18 | EXT | Ghost session recovery: end orphaned sessions from side panel | ~1V |
-| S07-19 | EXT | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default (BUG-FAT-010) | ~0.5V |
+| ID | Track | Deliverable | Priority | Cost | Owner | Week |
+|---|---|---|---|---|---|---|
+| S07-01 | AGENTS | Add `/api/v1/vigil/suggest` endpoint to AGENTS project | 🔴 P0 | ~4V | `[DEV:agents]` | W1 |
+| S07-02 | AGENTS | `llm_core` prompt templates for bug auto-complete + similarity | 🟠 P1 | ~3V | `[DEV:agents]` | W2 |
+| S07-03 | AGENTS | `resource_manager` Vigil usage tracking (project_id=vigil) | 🟡 P2 | ~2V | `[DEV:agents]` | W3 |
+| S07-04 | SERVER | Flip `VIGIL_LLM_MODE=live`, wire vigil-server → AGENTS API | 🔴 P0 | ~2V | `[DEV:server]` | W2 |
+| S07-05 | SERVER | Returning bug detection: semantic similarity on new bug receipt | 🟠 P1 | ~3V | `[DEV:server]` | W2 |
+| S07-06 | EXT | Bug auto-complete in editor (title + steps pre-fill from LLM) | 🟠 P1 | ~3V | `[DEV:ext]` | W2 |
+| S07-07 | SERVER | Severity auto-suggest (confidence score shown, user overrides) | 🟡 P2 | ~2V | `[DEV:server]` + `[DEV:ext]` | W3 |
+| S07-08a | AGENT | `vigil_agent` scaffold: `/project:vigil-agent` command + config (max time, cost, dry-run) | 🟠 P1 | ~1V | `[CTO]` | W1 |
+| S07-08b | AGENT | Bug analysis + classification (reproducible / needs-info / code-defect / UX-issue) | 🟠 P1 | ~1.5V | `[CTO]` + `[DEV:ext]` | W2 |
+| S07-08c | AGENT | Regression test generation + red confirmation | 🟠 P1 | ~1.5V | `[CTO]` + `[QA]` | W2 |
+| S07-08d | AGENT | Fix implementation + green confirmation + git commit to branch | 🟠 P1 | ~1V | `[CTO]` | W3 |
+| S07-09 | AGENT | Sprint health report (LLM-generated summary of open bugs + risk) | 🟡 P2 | ~2V | `[CTO]` + `[DEV:server]` | W3 |
+| S07-10 | QA | Integration tests: ext → server → AGENTS round-trip | 🟡 P2 | ~2V | `[QA]` | W3 |
+| S07-11 | SERVER | Shared types package (`packages/shared/`) — single source for ext + server + AGENTS types | 🟠 P1 | ~2V | `[DEV:server]` | W1 |
+| S07-12 | EXT | VIGILSession persistence via `chrome.storage.local` (service worker restart-safe) | 🟠 P1 | ~1.5V | `[DEV:ext]` | W1 |
+| S07-13 | DASHBOARD | Dashboard vitest config + component tests | 🟢 P3 | ~1V | `[DEV:dashboard]` | Defer |
+| S07-14 | INFRA | Vercel deployment: vigil-server (serverless) + dashboard (static) | 🟡 P2 | ~2V | `[INFRA]` + `[DEV:server]` | W3 |
+| S07-15 | SERVER | Neon PostgreSQL: migrate bug/feature storage from filesystem to managed Postgres | 🟠 P1 | ~4V | `[DEV:server]` | W1 |
+| S07-16 | EXT | Project-oriented session model: required project field, auto-sprint, persistent history | 🟠 P1 | ~5V | `[DEV:ext]` | W1-W2 |
+| S07-17 | DASHBOARD | Dashboard overhaul: project/sprint/session nav, screenshots, timeline, replay | 🟡 P2 | ~6V | `[DEV:dashboard]` | W3 |
+| S07-18 | EXT | Ghost session recovery: end orphaned sessions from side panel | 🟢 P3 | ~1V | `[DEV:ext]` | W3 |
+| S07-19 | EXT | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default (BUG-FAT-010) | 🟢 P3 | ~0.5V | `[DEV:ext]` | W1-D1 |
 
 **Total: ~51V** (includes 4.5V carry-forward from Sprint 06, 6V cloud infra, 12.5V Founder product vision)
 
@@ -356,4 +356,4 @@ QA — Integration Tests (S07-10)
 
 ---
 
-*Sprint 07 planned: 2026-02-26 | Updated: 2026-02-26 (carry-forwards + vigil_agent breakdown) | Depends on Sprint 06 | Owner: CPTO*
+*Sprint 07 planned: 2026-02-26 | Updated: 2026-02-27 (priority/owner/schedule assigned — see `sprint_07_plan.md`) | Depends on Sprint 06 | Owner: CPTO*
