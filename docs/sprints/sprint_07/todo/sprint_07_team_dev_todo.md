@@ -88,19 +88,35 @@
 
 ---
 
-## Track G — Founder Product Vision `[DEV:ext/dashboard]`
+## ⚡ Track G — PHASE 1: Founder UX Priority `[DEV:ext/dashboard]`
 
-> Captured during Sprint 06 FAT Round 2 (2026-02-27). Full requirements: `todo/sprint_07_product_vision.md`
-> S07-16 and S07-19 have NO dependencies — start Day 1. S07-17 depends on S07-15 + S07-16.
+> **RESTRUCTURED per D021:** Phase 1 items ship FIRST. FAT Round 3 gate before Phase 2.
+> Full requirements: `todo/sprint_07_product_vision.md`
 
 | Status | ID | Deliverable | Cost | Notes |
 |---|---|---|---|---|
-| [ ] | S07-16 | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V | 🟠 P1 — `[DEV:ext]` — New session form, data model change, `chrome.storage.local` history. See `sprint_07_product_vision.md` P1. |
-| [ ] | S07-17 | Dashboard overhaul: project/sprint/session nav, screenshots, timeline, replay | ~6V | 🟡 P2 — `[DEV:dashboard]` — Blocked by S07-15 (Neon) + S07-16 (new data model). See `sprint_07_product_vision.md` P2. |
-| [ ] | S07-18 | Ghost session recovery: "End stale session" button in side panel | ~1V | 🟢 P3 — `[DEV:ext]` — Detect orphaned sessions, allow user to end them. |
-| [ ] | S07-19 | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default | ~0.5V | 🟢 P3 — `[DEV:ext]` — One-line `manifest.json` change (BUG-FAT-010). Ship Day 1. |
+| [ ] | S07-16 | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V | 🔴 **P0** — `[DEV:ext]` — PHASE 1 TOP PRIORITY. New session form, data model, history. W1-W2. |
+| [ ] | S07-19 | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default | ~0.5V | 🟠 **P1** — `[DEV:ext]` — One-line `manifest.json` change (BUG-FAT-010). Ship D1. |
+| [ ] | S07-18 | Ghost session recovery: "End stale session" button in side panel | ~1V | 🟠 **P1** — `[DEV:ext]` — Detect orphaned sessions, allow user to end them. W1. |
+| [ ] | S07-17a | Dashboard overhaul Phase A: project/sprint/session nav, filters, screenshots | ~3V | 🟠 **P1** — `[DEV:dashboard]` — Blocked by S07-16 (data model). W2. |
+| [ ] | S07-17b | Dashboard overhaul Phase B: session timeline + recording replay | ~3V | 🟠 **P1** — `[DEV:dashboard]` — Blocked by S07-17a. W2. |
 
 **Track G total: ~12.5V**
+
+---
+
+## Track H — Carry-Forward Bugs `[DEV:ext]`
+
+> Sprint 06 deferred bugs + design review items that must be tracked in S07.
+> Added per D023. Phase 1 items.
+
+| Status | ID | Deliverable | Cost | Notes |
+|---|---|---|---|---|
+| [ ] | S07-20 | BUG-EXT-001 fix: Playwright codegen generates invalid TypeScript | ~1V | 🟡 P2 — `[DEV:ext]` — Fix regex at `playwright-codegen.ts:110`, unskip test. W1. |
+| [ ] | S07-21 | BUG-EXT-002: btn-publish testid implementation (or test removal) | ~1V | 🟡 P2 — `[DEV:ext]` — Spec-first gap from S06. Implement or remove test. W1. |
+| [ ] | S07-22 | HTTP route integration tests (S06 Track B review B03 carry-forward) | ~1.5V | 🟡 P2 — `[QA]` — Phase 2. Write after S07-15 (Neon) changes data layer. W3. |
+
+**Track H total: ~3.5V**
 
 ---
 
@@ -109,32 +125,32 @@
 | Status | ID | Deliverable | Cost | Notes |
 |---|---|---|---|---|
 | [ ] | S07-10 | Integration tests: ext → server → AGENTS round-trip | ~2V | Phase 2 — after Track B + Track C ship |
+| [ ] | S07-22 | HTTP route integration tests (S06 B03 carry-forward) | ~1.5V | Phase 2 — after S07-15 (Neon) |
 
-**QA total: ~2V**
+**QA total: ~3.5V**
 
 ---
 
 ## Dependency Summary
 
 ```
-Track A (AGENTS) ─── critical path ───→ Track B (server live)
-                                              ├──→ Track C (ext LLM features)
-                                              ├──→ Track D (vigil_agent)
-                                              └──→ QA (S07-10)
+⚡ PHASE 1 — UX First (Week 1-2):
+  Track G (Founder UX):   S07-19 (D1) → S07-12 (W1) → S07-16 (W1-W2) → S07-17a (W2) → S07-17b (W2)
+  Track E (carry):        S07-11 (W1) → available
+  Track H (carry bugs):   S07-20 + S07-21 (W1)
+  ──── FAT Round 3 GATE ────
 
-Track E (carry-forward) ─── no dependencies ───→ can start immediately
-Track F (cloud infra)  ─── no AGENTS dep ────→ S07-15 (Neon) → S07-14 (Vercel)
+⚡ PHASE 2 — Backend + LLM (Week 2-3):
+  Track A (AGENTS) ─── Phase 2 critical path ───→ Track B (server live)
+                                                        ├──→ Track C (ext LLM features)
+                                                        ├──→ Track D (vigil_agent)
+                                                        └──→ QA (S07-10)
+  Track F (cloud infra)  ─── no AGENTS dep ────→ S07-15 (Neon W2) → S07-14 (Vercel W3)
 
-Track G (Founder vision):
-  S07-19 (manifest fix)    ─── no dependencies ───→ Day 1 (10 min)
-  S07-16 (project sessions) ── no dependencies ───→ Day 1
-  S07-18 (ghost recovery)  ─── no dependencies ───→ anytime
-  S07-17 (dashboard overhaul) ── depends on S07-15 + S07-16
-
-Track D sub-tasks are sequential:
-  S07-08a (scaffold) → S07-08b (classify) → S07-08c (test gen) → S07-08d (fix)
+  Track D sub-tasks are sequential:
+    S07-08a (scaffold W1-2) → S07-08b (classify) → S07-08c (test gen) → S07-08d (fix)
 ```
 
 ---
 
-*Generated: 2026-02-26 | Updated: 2026-02-27 (added Track G — Founder product vision S07-16 through S07-19) | Sprint 07 | Owner: CPTO*
+*Generated: 2026-02-26 | Updated: 2026-02-27 (restructured: Phase 1 UX + Phase 2 Backend per D021. Added Track H carry-forward bugs per D023.) | Sprint 07 | Owner: CPTO*
