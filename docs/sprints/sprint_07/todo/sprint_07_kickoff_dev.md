@@ -18,6 +18,8 @@ Wire the AGENTS platform as Vigil's LLM backend. Ship bug auto-complete, returni
 **Track C — Extension LLM Features** (S07-06) — `[DEV:ext]`
 **Track D — Autonomous Agent** (S07-08a-d, S07-09) — `[DEV:*]`
 **Track E — Carry-Forward** (S07-11, S07-12, S07-13) — `[DEV:server/ext/dashboard]`
+**Track F — Cloud Infrastructure** (S07-15, S07-14) — `[DEV:server]` + `[INFRA]`
+**Track G — Founder Product Vision** (S07-16, S07-17, S07-18, S07-19) — `[DEV:ext/dashboard]`
 
 > **Track Dependencies — READ THIS FIRST:**
 > - **Track A is the critical path.** AGENTS `/api/v1/vigil/suggest` endpoint must exist before Track B can wire to it.
@@ -258,6 +260,61 @@ Replace markdown-as-DB filesystem storage with Neon managed Postgres:
 
 ---
 
+## Track G — Founder Product Vision (Captured during FAT Round 2)
+
+> Full requirements: `todo/sprint_07_product_vision.md`
+> S07-16 and S07-19 have NO dependencies — start Day 1.
+
+### S07-16 — Project-Oriented Session Model (~5V) — 🟠 P1
+
+**Files:** `src/popup/` (session form), `src/shared/types.ts`, `src/background/session-manager.ts`
+
+The session creation flow must become **project-oriented**:
+
+1. **Project field = required** — folder path (e.g. `C:\Synaptix-Labs\projects\vigil`). This IS the project identity.
+2. **Sprint auto-detected** from project's `docs/sprints/` folder structure. Auto-selects latest sprint. User can change via dropdown.
+3. **Session name auto-generated** (e.g. `vigil-session-2026-02-27-001`). User can edit.
+4. **Description field** — free-text, user-typed.
+5. **Persistent history** — last project/sprint choices remembered in `chrome.storage.local`. Next session pre-fills from history. User can pick from history or create NEW.
+
+**Data model change:**
+```
+Session (current):      name, url, tabId, tags
+Session (S07 target):   project (folder), sprint (auto), name (auto), description, url, tabId
+```
+
+### S07-17 — Dashboard Overhaul (~6V) — 🟡 P2
+
+**Files:** `packages/dashboard/src/` (all components)
+
+> Blocked by S07-15 (Neon — data layer change) + S07-16 (project model — new data structure)
+
+The dashboard must become a **product-oriented workflow tool**:
+
+1. **Navigation hierarchy:** Project selector → Sprint view → Session drill-down
+2. **Sprint context:** Show what project/repo the sprint belongs to
+3. **Filters:** By project, sprint, session
+4. **Bug/feature detail:** Show attached screenshots inline
+5. **Session timeline:** Visual timeline of session events
+6. **Recording replay:** Play rrweb recording directly in dashboard
+7. **Session list:** Sessions within a sprint (latest first, can browse)
+
+### S07-18 — Ghost Session Recovery (~1V) — 🟢 P3
+
+**Files:** `src/popup/` (side panel UI), `src/background/session-manager.ts`
+
+When page refreshes during active session, user has no way to end the orphaned session. Add "End stale session" button in the side panel that detects and terminates orphaned sessions.
+
+### S07-19 — Manifest Shortcut Fix (~0.5V) — 🟢 P3
+
+**File:** `manifest.json`
+
+Change `commands.open-bug-editor.suggested_key.default` from `Ctrl+Shift+B` to `Alt+Shift+B`. Chrome's built-in `Ctrl+Shift+B` (bookmarks bar toggle) takes precedence over extension `suggested_key` — the shortcut silently fails on fresh install (BUG-FAT-010).
+
+**Ship this on Day 1 — one-line change.**
+
+---
+
 ## Quality Gates (non-negotiable)
 
 ```
@@ -292,4 +349,4 @@ Replace markdown-as-DB filesystem storage with Neon managed Postgres:
 
 **Await your track assignment from CPTO before executing anything.**
 
-*Generated: 2026-02-26 | Sprint 07 | Owner: CPTO*
+*Generated: 2026-02-26 | Updated: 2026-02-27 (added Track G — Founder product vision S07-16 through S07-19) | Sprint 07 | Owner: CPTO*

@@ -64,8 +64,16 @@ All existing tests must still pass. Any failure is P0 — blocks Sprint 07 work.
 - Q710: vigil_agent full run — processes test bug, RED→GREEN, commits to branch (NOT main)
 - Q711: Sprint health report — generates readable report with correct stats
 
+**Phase 4 — After Track G ships (Founder product vision):**
+- Q712: Project-oriented session — project field required, sprint auto-detected, session name auto-generated
+- Q713: Persistent history — previous project/sprint remembered, dropdown populated
+- Q714: Dashboard overhaul — project/sprint/session navigation, screenshots inline, filters
+- Q715: Ghost session recovery — orphaned session detected and endable from side panel
+- Q716: Manifest shortcut — `Alt+Shift+B` works on fresh extension install (no manual setup)
+
 > Do NOT attempt Phase 2 until both vigil-server AND AGENTS are running.
 > Do NOT attempt Phase 3 until Phase 2 passes.
+> Phase 4 can run independently of Phases 2-3 (no AGENTS dependency).
 
 ---
 
@@ -151,6 +159,68 @@ All existing tests must still pass. Any failure is P0 — blocks Sprint 07 work.
 
 ---
 
+### Q712 — Project-Oriented Session
+
+```typescript
+// Verify: session creation is project-oriented
+// 1. Open side panel → "New Session"
+// 2. Verify: Project field exists and is REQUIRED (folder path input)
+// 3. Verify: Sprint dropdown auto-populated from project's docs/sprints/ folder
+// 4. Verify: Session name auto-generated (vigil-session-YYYY-MM-DD-NNN)
+// 5. Verify: Description field exists (free-text)
+// 6. Create session → verify session JSON contains project, sprint, name, description
+```
+
+### Q713 — Persistent History
+
+```typescript
+// Verify: last project/sprint choices remembered
+// 1. Create session with project "C:\Synaptix-Labs\projects\vigil", sprint "07"
+// 2. End session
+// 3. Click "New Session" again
+// 4. Verify: project field pre-filled with previous value
+// 5. Verify: sprint dropdown shows previous sprint selected
+// 6. Verify: can pick from history OR create new
+```
+
+### Q714 — Dashboard Overhaul
+
+```typescript
+// Verify: dashboard is project-oriented workflow tool
+// 1. Navigate to /dashboard
+// 2. Verify: project selector visible
+// 3. Select project → verify sprint list loads
+// 4. Select sprint → verify session list within sprint
+// 5. Click session → verify bugs/features with screenshots inline
+// 6. Verify: filters work (by project, sprint, session)
+```
+
+### Q715 — Ghost Session Recovery
+
+```typescript
+// Verify: orphaned sessions can be ended
+// 1. Create session on tab
+// 2. Simulate page refresh (Ctrl+R) — content script dies
+// 3. Open side panel
+// 4. Verify: "End stale session" button visible
+// 5. Click it → verify session ends cleanly
+// 6. Verify: can create new session after recovery
+```
+
+### Q716 — Manifest Shortcut
+
+```typescript
+// Verify: Alt+Shift+B works on fresh install
+// 1. Remove extension from Chrome
+// 2. Re-add extension (Load unpacked)
+// 3. Go to chrome://extensions/shortcuts
+// 4. Verify: "Open bug editor" shortcut = Alt+Shift+B (auto-assigned)
+// 5. Navigate to any page
+// 6. Press Alt+Shift+B → verify bug editor opens
+```
+
+---
+
 ## Required data-testid Attributes
 
 **Dashboard (existing from S06):** `dashboard-root`, `bug-list-table`, `feature-list-table`, `sprint-selector`, `bug-row-{BUG-ID}`, `severity-badge-{BUG-ID}`, `server-health-status`
@@ -165,6 +235,13 @@ All existing tests must still pass. Any failure is P0 — blocks Sprint 07 work.
 - `bug-editor-autocomplete-title` — LLM pre-filled title field
 - `bug-editor-autocomplete-steps` — LLM pre-filled steps field
 - `autocomplete-loading` — spinner while LLM request in flight
+- `session-project-input` — project folder path field (required)
+- `session-sprint-dropdown` — sprint auto-detect dropdown
+- `session-name-input` — auto-generated session name (editable)
+- `session-description-input` — free-text description field
+- `session-history-dropdown` — persistent history selector
+- `ghost-session-banner` — orphaned session warning
+- `ghost-session-end-btn` — "End stale session" action button
 
 ---
 
@@ -173,7 +250,7 @@ All existing tests must still pass. Any failure is P0 — blocks Sprint 07 work.
 - **Smoke** — extension loads, vigil-server health passes, AGENTS health passes
 - **Regression** — all existing E2E + unit tests green
 - **Integration** — Q704 round-trip + Q708 degradation
-- **Full** — regression + Q701–Q711 + manual verification
+- **Full** — regression + Q701–Q716 + manual verification
 
 ---
 
@@ -190,4 +267,4 @@ For every gate run:
 
 **Await your TODO assignment from CPTO before executing anything.**
 
-*Generated: 2026-02-26 | Sprint 07 | Owner: CPTO*
+*Generated: 2026-02-26 | Updated: 2026-02-27 (added Phase 4 — Founder product vision Q712 through Q716) | Sprint 07 | Owner: CPTO*

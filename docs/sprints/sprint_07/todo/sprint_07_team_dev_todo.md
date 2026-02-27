@@ -1,7 +1,7 @@
 # Sprint 07 — DEV Team Deliverable Checklist
 
-**Sprint goal:** Wire AGENTS LLM backend, ship vigil_agent autonomous loop, deploy to Vercel + Neon
-**Budget:** ~38.5V | **Ports:** 7474 (vigil-server), 8000 (AGENTS) | **LLM:** live (Groq llama-3.3-70b-versatile)
+**Sprint goal:** Wire AGENTS LLM backend, ship vigil_agent autonomous loop, deploy to Vercel + Neon, project-oriented sessions + dashboard overhaul
+**Budget:** ~51V (core P0+P1: ~36V) | **Ports:** 7474 (vigil-server), 8000 (AGENTS) | **LLM:** live (Groq llama-3.3-70b-versatile)
 
 ---
 
@@ -88,6 +88,22 @@
 
 ---
 
+## Track G — Founder Product Vision `[DEV:ext/dashboard]`
+
+> Captured during Sprint 06 FAT Round 2 (2026-02-27). Full requirements: `todo/sprint_07_product_vision.md`
+> S07-16 and S07-19 have NO dependencies — start Day 1. S07-17 depends on S07-15 + S07-16.
+
+| Status | ID | Deliverable | Cost | Notes |
+|---|---|---|---|---|
+| [ ] | S07-16 | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V | 🟠 P1 — `[DEV:ext]` — New session form, data model change, `chrome.storage.local` history. See `sprint_07_product_vision.md` P1. |
+| [ ] | S07-17 | Dashboard overhaul: project/sprint/session nav, screenshots, timeline, replay | ~6V | 🟡 P2 — `[DEV:dashboard]` — Blocked by S07-15 (Neon) + S07-16 (new data model). See `sprint_07_product_vision.md` P2. |
+| [ ] | S07-18 | Ghost session recovery: "End stale session" button in side panel | ~1V | 🟢 P3 — `[DEV:ext]` — Detect orphaned sessions, allow user to end them. |
+| [ ] | S07-19 | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default | ~0.5V | 🟢 P3 — `[DEV:ext]` — One-line `manifest.json` change (BUG-FAT-010). Ship Day 1. |
+
+**Track G total: ~12.5V**
+
+---
+
 ## QA `[QA]`
 
 | Status | ID | Deliverable | Cost | Notes |
@@ -109,10 +125,16 @@ Track A (AGENTS) ─── critical path ───→ Track B (server live)
 Track E (carry-forward) ─── no dependencies ───→ can start immediately
 Track F (cloud infra)  ─── no AGENTS dep ────→ S07-15 (Neon) → S07-14 (Vercel)
 
+Track G (Founder vision):
+  S07-19 (manifest fix)    ─── no dependencies ───→ Day 1 (10 min)
+  S07-16 (project sessions) ── no dependencies ───→ Day 1
+  S07-18 (ghost recovery)  ─── no dependencies ───→ anytime
+  S07-17 (dashboard overhaul) ── depends on S07-15 + S07-16
+
 Track D sub-tasks are sequential:
   S07-08a (scaffold) → S07-08b (classify) → S07-08c (test gen) → S07-08d (fix)
 ```
 
 ---
 
-*Generated: 2026-02-26 | Sprint 07 | Owner: CPTO*
+*Generated: 2026-02-26 | Updated: 2026-02-27 (added Track G — Founder product vision S07-16 through S07-19) | Sprint 07 | Owner: CPTO*
