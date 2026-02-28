@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "packages/server/api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "packages/server/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/health",
+      "dest": "packages/server/api/index.ts"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "packages/server/api/index.ts"
+    },
+    {
+      "src": "/dashboard/(.*)",
+      "dest": "packages/server/public/$1"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "packages/server/public/index.html"
+    }
+  ]
+}

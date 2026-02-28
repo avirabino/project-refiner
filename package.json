@@ -14,8 +14,9 @@
     "test:e2e": "playwright test",
     "test:all": "vitest run && playwright test",
     "test:coverage": "vitest run --coverage",
-    "dev:server": "cd packages/server && npx nodemon --exec tsx src/index.ts",
-    "build:server": "cd packages/server && tsc",
+    "build:shared": "cd packages/shared && tsc",
+    "dev:server": "cd packages/shared && tsc && cd ../server && npx nodemon --exec tsx src/index.ts",
+    "build:server": "cd packages/shared && tsc && cd ../server && tsc",
     "dev:dashboard": "cd packages/dashboard && vite",
     "build:dashboard": "cd packages/dashboard && vite build"
   },

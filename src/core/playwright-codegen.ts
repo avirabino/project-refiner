@@ -107,7 +107,7 @@ export function generatePlaywrightSpec(
       // After each navigation: wait for load and assert URL
       if (action.type === 'navigation' && action.value) {
         lines.push(`  await page.waitForLoadState('networkidle');`);
-        lines.push(`  await expect(page).toHaveURL(/${escapeRegex(action.value)}/)`);
+        lines.push(`  await expect(page).toHaveURL('${escapeStr(action.value)}');`);
       }
     }
   }
@@ -122,8 +122,4 @@ export function generatePlaywrightSpec(
 
   lines.push(`});`);
   return lines.join('\n');
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
 }

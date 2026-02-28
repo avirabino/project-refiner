@@ -1,3 +1,21 @@
+Vigil backlog
+--- 28-02-2026
+
+
+--- 27-02-2026
+
+Please do a FULL and DETILED review of the entire plan find the good bad and ugly and offer enhancements. We had an acceptance testing from the previous sprint that was NOT completed because of usability issues (project structures, poor dashboard...) - the first priority is implement those tasks and repeat acceptance testing - this is ALSO true for the bugs carried from the previous sprint. In your design review look  into those matters and prioritize the tasks in sprint 07 accordingly 
+
+Also See my comments:
+(1)  Seems that NOT All todo's are ready  for ALL agents - e.g. [DEV:agents]
+(2) First priority and what I wish to acceptance test before we move to the NEXT tasks (Agents, LLMs, Neon) are project, sprint, session configurations and Dashboard upgrades - those are lessons learned from the previous sprint
+
+
+[CPTO → DEV:ext] [CPTO → DEV:server] 
+[CPTO → DEV:dashboard] [CPTO → QA]
+
+
+
 --- 26-02-2026
 Regarding discovery - I am not sure that I agree :
 

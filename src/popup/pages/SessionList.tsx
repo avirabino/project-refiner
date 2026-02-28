@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { SessionStatus } from '@shared/types';
+import { SessionStatus, MessageType } from '@shared/types';
 import type { Session } from '@shared/types';
 import { getAllSessions } from '@core/db';
 import { formatDuration, formatTimestamp } from '@shared/utils';
@@ -35,6 +35,10 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
   const [hasNewVersion, setHasNewVersion] = useState(false);
   const [selectedProjectSettings, setSelectedProjectSettings] = useState<string | null>(null);
 
+  // S07-18: Ghost session detection
+  const [ghostSessionId, setGhostSessionId] = useState<string | null>(null);
+  const [endingGhost, setEndingGhost] = useState(false);
+
   useEffect(() => {
     chrome.storage.local.get('refineLastSeenVersion', (result) => {
       const seen = result.refineLastSeenVersion as string | undefined;
@@ -46,6 +50,35 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
     setShowChangelog(true);
     setHasNewVersion(false);
     chrome.storage.local.set({ refineLastSeenVersion: VERSION });
+  };
+
+  // S07-18: Detect orphaned/ghost sessions on mount
+  useEffect(() => {
+    chrome.runtime.sendMessage(
+      { type: MessageType.GET_SESSION_STATUS, source: 'popup' },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.ok) return;
+        const data = response.data as { sessionId: string | null; status: string; isRecording: boolean };
+        if (data.sessionId && (data.status === 'RECORDING' || data.status === 'PAUSED')) {
+          setGhostSessionId(data.sessionId);
+        } else {
+          setGhostSessionId(null);
+        }
+      }
+    );
+  }, []);
+
+  const handleEndGhostSession = () => {
+    setEndingGhost(true);
+    chrome.runtime.sendMessage(
+      { type: MessageType.STOP_RECORDING, source: 'popup' },
+      (response) => {
+        setEndingGhost(false);
+        if (chrome.runtime.lastError || !response?.ok) return;
+        setGhostSessionId(null);
+        loadSessions();
+      }
+    );
   };
 
   const loadSessions = useCallback(async () => {
@@ -65,7 +98,10 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
   // Refresh when background signals a session stopped
   useEffect(() => {
     const listener = (message: { type: string }) => {
-      if (message.type === 'SESSION_COMPLETED') loadSessions();
+      if (message.type === 'SESSION_COMPLETED') {
+        setGhostSessionId(null);
+        loadSessions();
+      }
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
@@ -148,6 +184,27 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
           className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500"
         />
       </div>
+
+      {/* S07-18: Ghost session banner */}
+      {ghostSessionId && (
+        <div
+          data-testid="ghost-session-banner"
+          className="mx-3 mt-2 px-3 py-2 rounded-lg border border-amber-600/40 bg-amber-900/20 flex items-center gap-2"
+        >
+          <span className="text-amber-400 text-sm shrink-0">&#x26A0;</span>
+          <p className="text-xs text-amber-300 flex-1">
+            Stale session detected <span className="text-amber-500 font-mono text-[10px]">({ghostSessionId})</span>
+          </p>
+          <button
+            data-testid="ghost-session-end-btn"
+            onClick={handleEndGhostSession}
+            disabled={endingGhost}
+            className="shrink-0 text-[10px] font-semibold bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white px-2 py-1 rounded transition-colors"
+          >
+            {endingGhost ? 'Ending\u2026' : 'End stale session'}
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

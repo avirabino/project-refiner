@@ -61,6 +61,7 @@ test('control bar appears after starting session', async ({ context, extensionId
   const urlDisplay = popupPage.getByTitle(targetUrl);
   await expect(urlDisplay).toBeVisible();
 
+  await popupPage.getByTestId('input-project-name').fill('C:\\E2E\\test-project');
   await popupPage.getByTestId('input-session-name').fill('Repro Missing Control Bar');
   await popupPage.getByTestId('btn-start-recording').click();
 

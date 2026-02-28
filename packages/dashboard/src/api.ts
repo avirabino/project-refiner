@@ -1,4 +1,4 @@
-import type { BugItem, BugUpdate, FeatureItem, HealthStatus } from './types';
+import type { BugItem, BugUpdate, FeatureItem, HealthStatus, SessionSummary, SessionDetail } from './types';
 
 const BASE = '/api';
 
@@ -53,6 +53,30 @@ export async function closeBug(bugId: string, resolution: string, keepTest: bool
     body: JSON.stringify({ resolution, keepTest }),
   });
   if (!res.ok) throw new Error(`Failed to close bug: ${res.status}`);
+}
+
+// ── Sprint 07: Session endpoints (S07-17a) ─────────────────────────────────
+// Requires GET /api/sessions and GET /api/sessions/:id on vigil-server.
+// These will be available once [DEV:server] builds the session reading routes.
+
+export async function fetchSessions(
+  project?: string,
+  sprint?: string,
+): Promise<SessionSummary[]> {
+  const params = new URLSearchParams();
+  if (project) params.set('project', project);
+  if (sprint) params.set('sprint', sprint);
+  const res = await fetch(`${BASE}/sessions?${params}`);
+  if (!res.ok) throw new Error(`Failed to fetch sessions: ${res.status}`);
+  const data = await res.json();
+  return data.sessions ?? [];
+}
+
+export async function fetchSession(sessionId: string): Promise<SessionDetail> {
+  const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`);
+  const data = await res.json();
+  return data.session;
 }
 
 export async function fetchHealth(): Promise<HealthStatus> {

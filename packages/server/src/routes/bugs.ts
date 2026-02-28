@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { listBugs, getBug } from '../filesystem/reader.js';
-import { updateBug, closeBug } from '../filesystem/writer.js';
-import { BugUpdateSchema } from '../types.js';
+import { getStorage } from '../storage/index.js';
+import { BugUpdateSchema } from '@synaptix/vigil-shared';
 
 export const bugsRouter = Router();
 
@@ -11,7 +10,7 @@ bugsRouter.get('/', async (req, res) => {
   const status = req.query.status as 'open' | 'fixed' | undefined;
 
   try {
-    const bugs = await listBugs(sprint, status);
+    const bugs = await getStorage().listBugs(sprint, status);
     res.json({ bugs, count: bugs.length });
   } catch (err) {
     console.error('[vigil-server] Error listing bugs:', err);
@@ -25,7 +24,7 @@ bugsRouter.get('/:id', async (req, res) => {
   const sprint = req.query.sprint as string | undefined;
 
   try {
-    const bug = await getBug(bugId, sprint);
+    const bug = await getStorage().getBug(bugId, sprint);
     if (!bug) {
       res.status(404).json({ error: `Bug ${bugId} not found` });
       return;
@@ -49,7 +48,7 @@ bugsRouter.patch('/:id', async (req, res) => {
   }
 
   try {
-    const updated = await updateBug(bugId, result.data, sprint);
+    const updated = await getStorage().updateBug(bugId, result.data, sprint);
     if (!updated) {
       res.status(404).json({ error: `Bug ${bugId} not found` });
       return;
@@ -73,7 +72,7 @@ bugsRouter.post('/:id/close', async (req, res) => {
   }
 
   try {
-    const closed = await closeBug(bugId, resolution, keepTest, sprint);
+    const closed = await getStorage().closeBug(bugId, resolution, keepTest, sprint);
     if (!closed) {
       res.status(404).json({ error: `Bug ${bugId} not found in open/` });
       return;

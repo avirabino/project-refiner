@@ -41,6 +41,7 @@ const mockServer = {
 };
 
 const { registerTools } = await import('../../../packages/server/src/mcp/tools.js');
+const { initStorage } = await import('../../../packages/server/src/storage/index.js');
 
 const BUG_CONTENT = `# BUG-001 — Save button broken
 
@@ -92,6 +93,9 @@ describe('MCP tools', () => {
 
     await writeFile(resolve(TEST_SPRINT_DIR, 'BUGS', 'open', 'BUG-001.md'), BUG_CONTENT, 'utf8');
     await writeFile(resolve(TEST_SPRINT_DIR, 'FEATURES', 'open', 'FEAT-001.md'), FEAT_CONTENT, 'utf8');
+
+    // Initialize filesystem storage (DATABASE_URL unset → filesystem fallback)
+    await initStorage();
   });
 
   afterEach(async () => {

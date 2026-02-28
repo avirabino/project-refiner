@@ -7,7 +7,7 @@
 import { MessageType } from '@shared/types';
 import type { ChromeMessage, ChromeResponse } from '@shared/messages';
 import type { Bug, Feature, RecordingChunk, InspectedElement } from '@shared/types';
-import { sessionManager, vigilSessionManager } from './session-manager';
+import { sessionManager, vigilSessionManager, loadServerPort } from './session-manager';
 import { captureScreenshot } from './screenshot';
 import {
   addBug,
@@ -36,7 +36,7 @@ export function handleMessage(
       return false;
 
     case MessageType.CREATE_SESSION: {
-      const { name, description, url, tabId: payloadTabId, recordMouseMove, tags, project } = message.payload as {
+      const { name, description, url, tabId: payloadTabId, recordMouseMove, tags, project, sprint } = message.payload as {
         name: string;
         description: string;
         url: string;
@@ -44,20 +44,19 @@ export function handleMessage(
         recordMouseMove?: boolean;
         tags?: string[];
         project?: string;
+        sprint?: string;
       };
-      
+
       const startSession = (finalTabId?: number) => {
         chrome.storage.local.get(['refineOutputPath'], (res) => {
           const outputPath = res.refineOutputPath as string | undefined;
           sessionManager
             .createSession(name, description ?? '', url, finalTabId, recordMouseMove ?? false, tags ?? [], project, outputPath)
             .then(async (session) => {
-              // Sprint 06 BUG-FAT-011: Also create a vigil session so Ctrl+Shift+S/B,
-              // snapshots, and End Session POST all work correctly.
               // Sprint 06 BUG-FAT-011: Create vigil session (idle — no auto-recording).
-              // Recording starts when user presses SPACE or Ctrl+Shift+R.
+              // S07-16: Pass sprint + description for project-oriented sessions.
               try {
-                await vigilSessionManager.createSession(name, project ?? '', finalTabId);
+                await vigilSessionManager.createSession(name, project ?? '', finalTabId, sprint, description);
                 console.log('[Vigil] Vigil session created alongside legacy session (idle)');
               } catch (e) {
                 console.warn('[Vigil] Failed to create vigil session:', (e as Error).message);
@@ -267,6 +266,24 @@ export function handleMessage(
       } else {
         sendResponse({ ok: false, error: 'No active session' });
       }
+      return true;
+    }
+
+    // Sprint 07 S07-16: Fetch sprint list for a project folder from vigil-server
+    case MessageType.GET_PROJECT_SPRINTS: {
+      const { projectPath } = message.payload as { projectPath: string };
+      if (!projectPath) {
+        sendResponse({ ok: true, data: { exists: false, sprints: [], current: null } });
+        return false;
+      }
+
+      loadServerPort()
+        .then(port => fetch(`http://localhost:${port}/api/sprints/project?path=${encodeURIComponent(projectPath)}`, {
+          signal: AbortSignal.timeout(3000),
+        }))
+        .then(r => r.json())
+        .then(data => sendResponse({ ok: true, data }))
+        .catch(() => sendResponse({ ok: true, data: { exists: false, sprints: [], current: null } }));
       return true;
     }
 

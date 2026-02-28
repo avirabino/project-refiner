@@ -384,6 +384,16 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
           >
             {exportLoading === 'zip' ? '⏳ Generating…' : '📦 Export ZIP (Save As…)'}
           </button>
+          {session.outputPath && (
+            <button
+              data-testid="btn-publish"
+              onClick={() => handleExport('publish')}
+              disabled={exportLoading !== null}
+              className="w-full text-left px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-50 text-xs font-semibold text-white transition-colors"
+            >
+              {exportLoading === 'publish' ? '⏳ Publishing…' : '🚀 Publish to Output Path'}
+            </button>
+          )}
         </div>
 
         {/* Danger zone */}

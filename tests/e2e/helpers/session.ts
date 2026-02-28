@@ -3,8 +3,9 @@
  *
  * DEV CONTRACT — popup must implement these data-testid attributes:
  *   btn-new-session        — button on SessionList that opens NewSession form
+ *   input-project-name     — text input for the project path (required, S07-16)
  *   input-session-name     — text input for the session name
- *   btn-start-recording    — submit button that sends START_SESSION to background
+ *   btn-start-recording    — submit button that sends CREATE_SESSION to background
  *   recording-status       — element showing current session status text
  *   session-list-item      — repeated element for each session in the list
  *
@@ -32,16 +33,21 @@ export interface SessionHandle {
   sessionName: string;
 }
 
+/** Default project path used by E2E tests when no specific project is needed. */
+export const DEFAULT_PROJECT = 'C:\\E2E\\test-project';
+
 export async function createSession(
   context: BrowserContext,
   extensionId: string,
-  sessionName: string = 'QA Test Session'
+  sessionName: string = 'QA Test Session',
+  project: string = DEFAULT_PROJECT
 ): Promise<SessionHandle> {
   const popupPage = await context.newPage();
   await popupPage.goto(`chrome-extension://${extensionId}/src/popup/popup.html`);
   await popupPage.waitForLoadState('networkidle');
 
   await popupPage.getByTestId('btn-new-session').first().click();
+  await popupPage.getByTestId('input-project-name').fill(project);
   await popupPage.getByTestId('input-session-name').fill(sessionName);
   await popupPage.getByTestId('btn-start-recording').click();
 

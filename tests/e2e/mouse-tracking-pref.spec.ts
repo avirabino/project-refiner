@@ -49,6 +49,7 @@ test('Session created with mouse tracking off stores recordMouseMove=false', asy
   await popupPage.waitForLoadState('networkidle');
 
   await popupPage.getByTestId('btn-new-session').first().click();
+  await popupPage.getByTestId('input-project-name').fill('C:\\E2E\\test-project');
   await popupPage.getByTestId('input-session-name').fill('Q503 Mouse Off Session');
   // Leave checkbox unchecked (default)
   await popupPage.getByTestId('btn-start-recording').click();

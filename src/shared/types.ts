@@ -1,7 +1,46 @@
 /**
  * @file types.ts
- * @description Core TypeScript interfaces and enums for SynaptixLabs Refine.
+ * @description Core TypeScript types for Vigil Chrome Extension.
+ *
+ * Shared types (Bug, Feature, VIGILSession, etc.) are re-exported from
+ * @synaptix/vigil-shared — the single source of truth for ext + server + dashboard.
+ * Extension-only types (MessageType, Action, Session, etc.) remain here.
  */
+
+// ── Re-exports from shared package (S07-11) ─────────────────────────────────
+export {
+  BugPriority,
+  BugPrioritySchema,
+  BugStatus,
+  BugStatusSchema,
+  FeatureType,
+  FeatureTypeSchema,
+  FeatureStatus,
+  FeatureStatusSchema,
+  BugSchema,
+  FeatureSchema,
+  RrwebChunkSchema,
+  VIGILRecordingSchema,
+  VIGILSnapshotSchema,
+  VIGILSessionSchema,
+  BugUpdateSchema,
+  TEST_STATUS,
+} from '@synaptix/vigil-shared';
+
+export type {
+  Bug,
+  Feature,
+  RrwebChunk,
+  VIGILRecording,
+  VIGILSnapshot,
+  VIGILSession,
+  BugUpdate,
+  BugFile,
+  FeatureFile,
+  HealthStatus,
+} from '@synaptix/vigil-shared';
+
+// ── Extension-only types ─────────────────────────────────────────────────────
 
 /**
  * Status of a recording session.
@@ -11,25 +50,6 @@ export enum SessionStatus {
   PAUSED = 'PAUSED',
   COMPLETED = 'COMPLETED',
   ERROR = 'ERROR'
-}
-
-/**
- * Priority level for logged bugs.
- */
-export enum BugPriority {
-  P0 = 'P0', // Critical: Blocker
-  P1 = 'P1', // High: Core functionality broken
-  P2 = 'P2', // Medium: Non-critical bug
-  P3 = 'P3'  // Low: Cosmetic or minor issue
-}
-
-/**
- * Type of feature request logged.
- */
-export enum FeatureType {
-  ENHANCEMENT = 'ENHANCEMENT',
-  NEW_FEATURE = 'NEW_FEATURE',
-  UX_IMPROVEMENT = 'UX_IMPROVEMENT'
 }
 
 /**
@@ -50,14 +70,16 @@ export enum MessageType {
   CAPTURE_SCREENSHOT = 'CAPTURE_SCREENSHOT',
   SESSION_STATUS_UPDATE = 'SESSION_STATUS_UPDATE',
   GET_SESSION_STATUS = 'GET_SESSION_STATUS',
-  ANNOTATE_ACTION = 'ANNOTATE_ACTION',  // R022: Attach a note to the last recorded action
-  LOG_INSPECTOR_ELEMENT = 'LOG_INSPECTOR_ELEMENT',  // R023: Log element captured by inspector
-  OPEN_SIDE_PANEL = 'OPEN_SIDE_PANEL',  // Request background to open/focus the side panel
+  ANNOTATE_ACTION = 'ANNOTATE_ACTION',
+  LOG_INSPECTOR_ELEMENT = 'LOG_INSPECTOR_ELEMENT',
+  OPEN_SIDE_PANEL = 'OPEN_SIDE_PANEL',
   // Sprint 06 — Vigil session model
   TOGGLE_RECORDING = 'TOGGLE_RECORDING',
   OPEN_BUG_EDITOR = 'OPEN_BUG_EDITOR',
   SESSION_SYNCED = 'SESSION_SYNCED',
   SESSION_SYNC_FAILED = 'SESSION_SYNC_FAILED',
+  // Sprint 07 — Project-oriented sessions (S07-16)
+  GET_PROJECT_SPRINTS = 'GET_PROJECT_SPRINTS',
 }
 
 /**
@@ -73,64 +95,29 @@ export interface Action {
   selectorStrategy?: 'data-testid' | 'aria-label' | 'id' | 'css' | 'playwright';
   selectorConfidence?: 'high' | 'medium' | 'low';
   value?: string;
-  note?: string; // R022: Optional annotation
+  note?: string;
 }
 
 /**
- * Represents a logged bug during a session.
- */
-export interface Bug {
-  id: string;               // bug-XXXXXXXX
-  sessionId: string;
-  type: 'bug';
-  priority: BugPriority;
-  status: 'open' | 'in_progress' | 'resolved' | 'wontfix'; // R026
-  title: string;
-  description: string;
-  url: string;
-  elementSelector?: string;
-  screenshotId?: string;
-  timestamp: number;
-}
-
-/**
- * Represents a logged feature request during a session.
- */
-export interface Feature {
-  id: string;               // feat-XXXXXXXX
-  sessionId: string;
-  type: 'feature';
-  featureType: FeatureType;
-  status: 'open' | 'planned' | 'in_sprint' | 'done'; // R027
-  sprintRef?: string; // R027: E.g., 'Sprint 04'
-  title: string;
-  description: string;
-  url: string;
-  elementSelector?: string;
-  screenshotId?: string;
-  timestamp: number;
-}
-
-/**
- * Represents a complete recording session.
+ * Represents a complete recording session (legacy model).
  */
 export interface Session {
-  id: string;               // ats-YYYY-MM-DD-NNN
+  id: string;
   name: string;
   description: string;
   status: SessionStatus;
-  project?: string;         // R025: Project association
-  outputPath?: string;      // R025: Local filesystem export destination
-  tags: string[];           // R020: Session tags
-  startedAt: number;        // Unix ms
+  project?: string;
+  outputPath?: string;
+  tags: string[];
+  startedAt: number;
   stoppedAt?: number;
-  duration: number;         // ms (excludes paused time)
-  pages: string[];          // distinct URLs visited
+  duration: number;
+  pages: string[];
   actionCount: number;
   bugCount: number;
   featureCount: number;
   screenshotCount: number;
-  recordMouseMove: boolean;  // Mouse Tracking Preference: if false, rrweb skips mousemove events
+  recordMouseMove: boolean;
 }
 
 /**
@@ -147,24 +134,24 @@ export interface RefineProjectConfig {
 }
 
 /**
- * A chunk of rrweb events from one page load within a session.
+ * A chunk of rrweb events from one page load within a session (legacy/Dexie model).
  */
 export interface RecordingChunk {
-  id?: number;              // auto-increment (Dexie)
+  id?: number;
   sessionId: string;
   chunkIndex: number;
   pageUrl: string;
-  events: unknown[];        // rrweb serialized events
+  events: unknown[];
   createdAt: number;
-  compressed?: boolean;     // R015: True if events array is empty and data contains gzip base64
-  data?: string;            // R015: Compressed events
+  compressed?: boolean;
+  data?: string;
 }
 
 /**
  * An element captured by the inspector tool during a session.
  */
 export interface InspectedElement {
-  id: string;               // insp-XXXXXXXX
+  id: string;
   sessionId: string;
   selector: string;
   url: string;
@@ -176,68 +163,11 @@ export interface InspectedElement {
  * A screenshot captured during a session.
  */
 export interface Screenshot {
-  id: string;               // ss-XXXXXXXX
+  id: string;
   sessionId: string;
-  dataUrl: string;          // base64 data URL (JPEG 80%)
-  url: string;              // page URL when captured
+  dataUrl: string;
+  url: string;
   timestamp: number;
   width: number;
   height: number;
-}
-
-// ── Sprint 06: Vigil Session Model (D002) ──────────────────────────────────
-// Session = container, recording = opt-in.
-// These interfaces coexist with the legacy Session type above.
-// Migration: once all tests pass on the new model, deprecate Session.
-
-/**
- * A chunk of rrweb events within a VIGILRecording.
- */
-export interface RrwebChunk {
-  chunkIndex: number;
-  pageUrl: string;
-  events: unknown[];        // rrweb serialized events
-  createdAt: number;
-  compressed?: boolean;
-  data?: string;            // compressed payload
-}
-
-/**
- * An opt-in rrweb recording segment within a VIGILSession.
- */
-export interface VIGILRecording {
-  id: string;               // rec-XXXXXXXX
-  startedAt: number;
-  endedAt?: number;
-  rrwebChunks: RrwebChunk[];
-  mouseTracking: boolean;
-}
-
-/**
- * A point-in-time screenshot captured during a VIGILSession.
- */
-export interface VIGILSnapshot {
-  id: string;               // snap-XXXXXXXX
-  capturedAt: number;       // session clock ms
-  screenshotDataUrl: string;
-  url: string;
-  triggeredBy: 'manual' | 'bug-editor' | 'auto';
-}
-
-/**
- * Vigil session container (Sprint 06+). Session is always running once created;
- * recordings are opt-in segments within the session.
- */
-export interface VIGILSession {
-  id: string;               // vigil-SESSION-YYYYMMDD-NNN
-  name: string;
-  projectId: string;
-  startedAt: number;
-  endedAt?: number;
-  clock: number;            // ms elapsed since startedAt (always running)
-  recordings: VIGILRecording[];
-  snapshots: VIGILSnapshot[];
-  bugs: Bug[];
-  features: Feature[];
-  pendingSync?: boolean;    // true if POST to server failed
 }

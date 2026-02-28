@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { VIGILSessionSchema } from '../types.js';
+import { VIGILSessionSchema } from '@synaptix/vigil-shared';
 import { loadConfig } from '../config.js';
-import { writeSessionJson, writeBug, writeFeature } from '../filesystem/writer.js';
+import { getStorage } from '../storage/index.js';
 
 export const sessionRouter = Router();
 
@@ -19,22 +19,23 @@ sessionRouter.post('/', async (req, res) => {
   const session = result.data;
   const config = loadConfig();
   const sprint = config.sprintCurrent;
+  const storage = getStorage();
 
   try {
     // Write raw session JSON
-    await writeSessionJson(session);
+    await storage.writeSessionJson(session);
 
     // Write bug files
     const bugIds: string[] = [];
     for (const bug of session.bugs) {
-      const bugId = await writeBug(bug, sprint);
+      const bugId = await storage.writeBug(bug, sprint);
       bugIds.push(bugId);
     }
 
     // Write feature files
     const featIds: string[] = [];
     for (const feat of session.features) {
-      const featId = await writeFeature(feat, sprint);
+      const featId = await storage.writeFeature(feat, sprint);
       featIds.push(featId);
     }
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { listFeatures, getFeature } from '../filesystem/reader.js';
+import { getStorage } from '../storage/index.js';
 
 export const featuresRouter = Router();
 
@@ -9,7 +9,7 @@ featuresRouter.get('/', async (req, res) => {
   const status = req.query.status as 'open' | 'done' | undefined;
 
   try {
-    const features = await listFeatures(sprint, status);
+    const features = await getStorage().listFeatures(sprint, status);
     res.json({ features, count: features.length });
   } catch (err) {
     console.error('[vigil-server] Error listing features:', err);
@@ -23,7 +23,7 @@ featuresRouter.get('/:id', async (req, res) => {
   const sprint = req.query.sprint as string | undefined;
 
   try {
-    const feature = await getFeature(featId, sprint);
+    const feature = await getStorage().getFeature(featId, sprint);
     if (!feature) {
       res.status(404).json({ error: `Feature ${featId} not found` });
       return;

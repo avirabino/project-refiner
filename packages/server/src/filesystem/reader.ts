@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { getSprintDir, loadConfig } from '../config.js';
-import type { BugFile, FeatureFile } from '../types.js';
+import type { BugFile, FeatureFile } from '@synaptix/vigil-shared';
 
 function parseBugFile(filename: string, content: string): BugFile {
   const id = filename.replace('.md', '');
@@ -17,6 +17,7 @@ function parseBugFile(filename: string, content: string): BugFile {
   const actualMatch = content.match(/## Actual\n([\s\S]*?)(?=\n## |$)/);
   const regressionMatch = content.match(/## Regression Test\n([\s\S]*?)(?=\n## |$)/);
   const resolutionMatch = content.match(/## Resolution\n([\s\S]*?)(?=\n## |$)/);
+  const urlMatch = content.match(/## URL\n([\s\S]*?)(?=\n## |$)/);
 
   return {
     id,
@@ -28,6 +29,7 @@ function parseBugFile(filename: string, content: string): BugFile {
     stepsToReproduce: stepsMatch?.[1]?.trim(),
     expected: expectedMatch?.[1]?.trim(),
     actual: actualMatch?.[1]?.trim(),
+    url: urlMatch?.[1]?.trim(),
     regressionTest: regressionMatch?.[1]?.trim(),
     resolution: resolutionMatch?.[1]?.trim(),
     raw: content,

@@ -68,7 +68,7 @@
 | Status | ID | Deliverable | Cost | Notes |
 |---|---|---|---|---|
 | [ ] | S07-11 | Shared types package (`packages/shared/`) | ~2V | Zod schemas + `z.infer<>` types, ext + server import from one source |
-| [ ] | S07-12 | VIGILSession persistence (chrome.storage.local) | ~1.5V | Persist on state change, rehydrate on service worker restart |
+| [x] | S07-12 | VIGILSession persistence (chrome.storage.local) | ~0V | ✅ Already implemented in S06. Verified: `persistState()`, `restoreVigilState()`, `clearPersistedState()` all functional. |
 | [ ] | S07-13 | Dashboard vitest config + component tests | ~1V | BugList, FeatureList, SprintSelector, HealthIndicator |
 
 **Track E total: ~4.5V**
@@ -95,9 +95,9 @@
 
 | Status | ID | Deliverable | Cost | Notes |
 |---|---|---|---|---|
-| [ ] | S07-16 | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V | 🔴 **P0** — `[DEV:ext]` — PHASE 1 TOP PRIORITY. New session form, data model, history. W1-W2. |
-| [ ] | S07-19 | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default | ~0.5V | 🟠 **P1** — `[DEV:ext]` — One-line `manifest.json` change (BUG-FAT-010). Ship D1. |
-| [ ] | S07-18 | Ghost session recovery: "End stale session" button in side panel | ~1V | 🟠 **P1** — `[DEV:ext]` — Detect orphaned sessions, allow user to end them. W1. |
+| [x] | S07-16 | Project-oriented session model: required project field, auto-sprint, persistent history | ~5V | ✅ `[DEV:ext]` — Done 2026-02-28. Form rewrite, data model, server endpoint, E2E helpers updated. Design review passed. |
+| [x] | S07-19 | Manifest shortcut fix: `Ctrl+Shift+B` → `Alt+Shift+B` default | ~0.5V | ✅ `[DEV:ext]` — Done 2026-02-28. `manifest.json:60` updated. |
+| [x] | S07-18 | Ghost session recovery: "End stale session" button in side panel | ~1V | ✅ `[DEV:ext]` — Done 2026-02-28. Banner in `SessionList.tsx` with `ghost-session-banner` / `ghost-session-end-btn` testids. |
 | [ ] | S07-17a | Dashboard overhaul Phase A: project/sprint/session nav, filters, screenshots | ~3V | 🟠 **P1** — `[DEV:dashboard]` — Blocked by S07-16 (data model). W2. |
 | [ ] | S07-17b | Dashboard overhaul Phase B: session timeline + recording replay | ~3V | 🟠 **P1** — `[DEV:dashboard]` — Blocked by S07-17a. W2. |
 
@@ -112,8 +112,8 @@
 
 | Status | ID | Deliverable | Cost | Notes |
 |---|---|---|---|---|
-| [ ] | S07-20 | BUG-EXT-001 fix: Playwright codegen generates invalid TypeScript | ~1V | 🟡 P2 — `[DEV:ext]` — Fix regex at `playwright-codegen.ts:110`, unskip test. W1. |
-| [ ] | S07-21 | BUG-EXT-002: btn-publish testid implementation (or test removal) | ~1V | 🟡 P2 — `[DEV:ext]` — Spec-first gap from S06. Implement or remove test. W1. |
+| [x] | S07-20 | BUG-EXT-001 fix: Playwright codegen generates invalid TypeScript | ~1V | ✅ `[DEV:ext]` — Done 2026-02-28. String-based `toHaveURL`, removed `escapeRegex`. Regression test + E2E unskipped. |
+| [x] | S07-21 | BUG-EXT-002: btn-publish testid implementation (or test removal) | ~1V | ✅ `[DEV:ext]` — Done 2026-02-28. `btn-publish` in `SessionDetail.tsx` (conditional on `outputPath`). E2E unskipped. |
 | [ ] | S07-22 | HTTP route integration tests (S06 Track B review B03 carry-forward) | ~1.5V | 🟡 P2 — `[QA]` — Phase 2. Write after S07-15 (Neon) changes data layer. W3. |
 
 **Track H total: ~3.5V**
@@ -153,4 +153,4 @@
 
 ---
 
-*Generated: 2026-02-26 | Updated: 2026-02-27 (restructured: Phase 1 UX + Phase 2 Backend per D021. Added Track H carry-forward bugs per D023.) | Sprint 07 | Owner: CPTO*
+*Generated: 2026-02-26 | Updated: 2026-02-28 ([DEV:ext] Phase 1 complete: S07-12, S07-16, S07-18, S07-19, S07-20, S07-21 all done. 173/173 tests green.) | Sprint 07 | Owner: CPTO*

@@ -82,9 +82,8 @@ test('Export Playwright downloads a .spec.ts with expected Playwright commands a
   }
 });
 
-// BUG-EXT-001: Codegen generates invalid TypeScript (toHaveURL regex without semicolons).
-// Deferred to Sprint 07 per CPTO decision D1 (2026-02-26). Convenience feature, not core flow.
-test.skip('Exported .spec.ts is syntactically valid TypeScript', async ({ context, extensionId }) => {
+// BUG-EXT-001: Fixed in Sprint 07 (S07-20) — toHaveURL now uses string matching with semicolons.
+test('Exported .spec.ts is syntactically valid TypeScript', async ({ context, extensionId }) => {
   const { popupPage } = await createSession(context, extensionId, 'Q203 TypeScript Validity Session');
   const page = await openTargetApp(context);
   await expect(page.getByTestId('refine-control-bar')).toBeVisible({ timeout: 5000 });

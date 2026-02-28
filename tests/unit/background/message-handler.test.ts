@@ -89,4 +89,38 @@ describe('handleMessage routing', () => {
     expect(res.ok).toBe(true);
     expect((res.data as { status: string }).status).toBe('COMPLETED');
   });
+
+  it('GET_PROJECT_SPRINTS with empty projectPath returns fallback data', async () => {
+    const res = await call(MessageType.GET_PROJECT_SPRINTS, { projectPath: '' });
+    expect(res.ok).toBe(true);
+    expect(res.data).toEqual({ exists: false, sprints: [], current: null });
+  });
+
+  it('GET_PROJECT_SPRINTS with valid projectPath attempts fetch to vigil-server', async () => {
+    const mockData = { exists: true, sprints: [{ id: '07', name: 'sprint_07' }], current: 'sprint_07' };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockData),
+    } as Response);
+
+    const res = await call(MessageType.GET_PROJECT_SPRINTS, { projectPath: 'C:\\test\\project' });
+    expect(res.ok).toBe(true);
+    expect(res.data).toEqual(mockData);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/api/sprints/project?path='),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  it('GET_PROJECT_SPRINTS returns fallback on fetch failure', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
+
+    const res = await call(MessageType.GET_PROJECT_SPRINTS, { projectPath: 'C:\\test\\project' });
+    expect(res.ok).toBe(true);
+    expect(res.data).toEqual({ exists: false, sprints: [], current: null });
+
+    fetchSpy.mockRestore();
+  });
 });

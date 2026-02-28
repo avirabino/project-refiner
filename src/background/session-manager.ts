@@ -302,7 +302,7 @@ export async function restoreVigilState(): Promise<boolean> {
 
 let cachedServerPort: number | null = null;
 
-async function loadServerPort(): Promise<number> {
+export async function loadServerPort(): Promise<number> {
   if (cachedServerPort !== null) return cachedServerPort;
   try {
     const configUrl = chrome.runtime.getURL('vigil.config.json');
@@ -361,6 +361,8 @@ export const vigilSessionManager = {
     name: string,
     projectId: string,
     tabId?: number,
+    sprint?: string,
+    description?: string,
   ): Promise<VIGILSession> {
     if (vigilState.session) {
       throw new Error(`[Vigil] Session already active: ${vigilState.session.id}`);
@@ -374,6 +376,8 @@ export const vigilSessionManager = {
       id: generateVigilSessionId(new Date(), sequence),
       name,
       projectId,
+      sprint,
+      description,
       startedAt: now,
       clock: 0,
       recordings: [],

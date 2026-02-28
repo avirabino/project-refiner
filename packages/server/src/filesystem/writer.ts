@@ -2,8 +2,8 @@ import { writeFile, mkdir, readFile, unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { getSprintDir, getVigilDataDir, loadConfig } from '../config.js';
 import { nextBugId, nextFeatId } from './counter.js';
-import { TEST_STATUS } from '../types.js';
-import type { Bug, Feature, VIGILSession, BugUpdate } from '../types.js';
+import { TEST_STATUS } from '@synaptix/vigil-shared';
+import type { Bug, Feature, VIGILSession, BugUpdate } from '@synaptix/vigil-shared';
 
 /** Resolve sprint dir for bugs. Undefined → current sprint from config. */
 function bugDir(sprint?: string, status: 'open' | 'fixed' = 'open'): string {

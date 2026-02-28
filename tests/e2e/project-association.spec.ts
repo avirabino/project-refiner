@@ -114,9 +114,8 @@ test('Selecting a project in filter shows gear button, clicking opens ProjectSet
   await expect(popup.getByTestId('btn-refresh-dashboard')).toBeVisible();
 });
 
-// BUG-EXT-002: btn-publish testid never implemented in SessionDetail.
-// Deferred to Sprint 07 per CPTO decision D2 (2026-02-26). Spec-first gap.
-test.skip('btn-publish is visible in SessionDetail when outputPath is set via storage', async ({ context, extensionId }) => {
+// BUG-EXT-002: Fixed in Sprint 07 (S07-21) — btn-publish now renders when session.outputPath is set.
+test('btn-publish is visible in SessionDetail when outputPath is set via storage', async ({ context, extensionId }) => {
   // Set refineOutputPath in chrome.storage.local BEFORE creating the session
   // so the background attaches outputPath to the Session record at creation time.
   const setupPage = await context.newPage();

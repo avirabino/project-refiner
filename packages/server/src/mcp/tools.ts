@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { listBugs, getBug, listFeatures, getFeature } from '../filesystem/reader.js';
-import { updateBug, closeBug } from '../filesystem/writer.js';
-import { BugUpdateSchema } from '../types.js';
+import { getStorage } from '../storage/index.js';
+import { BugUpdateSchema } from '@synaptix/vigil-shared';
 
 export function registerTools(server: McpServer): void {
   // 1. vigil_list_bugs
@@ -14,7 +13,7 @@ export function registerTools(server: McpServer): void {
       status: z.enum(['open', 'fixed']).optional().describe('Filter by status'),
     },
     async ({ sprint, status }) => {
-      const bugs = await listBugs(sprint, status);
+      const bugs = await getStorage().listBugs(sprint, status);
       return {
         content: [
           {
@@ -34,7 +33,7 @@ export function registerTools(server: McpServer): void {
       bug_id: z.string().describe('Bug ID (e.g. "BUG-001")'),
     },
     async ({ bug_id }) => {
-      const bug = await getBug(bug_id);
+      const bug = await getStorage().getBug(bug_id);
       if (!bug) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ error: `Bug ${bug_id} not found` }) }],
@@ -56,7 +55,7 @@ export function registerTools(server: McpServer): void {
       fields: BugUpdateSchema.describe('Fields to update'),
     },
     async ({ bug_id, fields }) => {
-      const updated = await updateBug(bug_id, fields);
+      const updated = await getStorage().updateBug(bug_id, fields);
       if (!updated) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ error: `Bug ${bug_id} not found` }) }],
@@ -79,7 +78,7 @@ export function registerTools(server: McpServer): void {
       keep_test: z.boolean().describe('Whether to keep the regression test'),
     },
     async ({ bug_id, resolution, keep_test }) => {
-      const closed = await closeBug(bug_id, resolution, keep_test);
+      const closed = await getStorage().closeBug(bug_id, resolution, keep_test);
       if (!closed) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ error: `Bug ${bug_id} not found in open/` }) }],
@@ -101,7 +100,7 @@ export function registerTools(server: McpServer): void {
       status: z.enum(['open', 'done']).optional().describe('Filter by status'),
     },
     async ({ sprint, status }) => {
-      const features = await listFeatures(sprint, status);
+      const features = await getStorage().listFeatures(sprint, status);
       return {
         content: [
           {
@@ -121,7 +120,7 @@ export function registerTools(server: McpServer): void {
       feat_id: z.string().describe('Feature ID (e.g. "FEAT-001")'),
     },
     async ({ feat_id }) => {
-      const feature = await getFeature(feat_id);
+      const feature = await getStorage().getFeature(feat_id);
       if (!feature) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ error: `Feature ${feat_id} not found` }) }],

@@ -81,6 +81,13 @@ describe('generatePlaywrightSpec', () => {
     expect(spec).toContain(`await page.goto('http://localhost:38470/')`);
   });
 
+  it('navigation generates valid toHaveURL with string (not regex) and semicolons', () => {
+    const spec = generatePlaywrightSpec(baseSession, [navAction], []);
+    expect(spec).toContain(`await expect(page).toHaveURL('http://localhost:38470/');`);
+    // Must NOT contain regex literal URL assertion (BUG-EXT-001)
+    expect(spec).not.toMatch(/toHaveURL\(\//);
+  });
+
   it('maps click to page.locator().click() with CSS attribute selector for data-testid', () => {
     const spec = generatePlaywrightSpec(baseSession, [clickAction], []);
     expect(spec).toContain(`'[data-testid="btn-submit"]'`);

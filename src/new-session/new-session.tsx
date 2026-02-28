@@ -1,106 +1,163 @@
 /**
  * @file new-session.tsx
- * @description Standalone tab entry point for the New Recording Session form.
- * Opens as a full Chrome tab so it is NOT closed when the user clicks outside
- * (unlike the popup which always closes on blur — a hard Chrome constraint).
- *
- * On successful session creation, posts SESSION_CREATED to the background so
- * the popup refreshes its session list when next opened.
+ * @description Standalone tab entry point for the New Recording Session form (S07-16).
+ * Project-oriented: required project field, auto-sprint detection, auto-generated name.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MessageType } from '@shared/types';
 import type { Session } from '@shared/types';
-import { getAllSessions } from '@core/db';
 import '@popup/popup.css';
 
+interface SprintEntry {
+  id: string;
+  name: string;
+}
+
+interface SessionHistory {
+  lastProject: string;
+  lastSprint: string;
+  recentProjects: string[];
+}
+
+const HISTORY_KEY = 'vigilSessionHistory';
+
+function extractProjectName(path: string): string {
+  const segments = path.replace(/\\/g, '/').split('/').filter(Boolean);
+  return segments[segments.length - 1] || 'session';
+}
+
+function generateSessionName(projectPath: string, sequence: number): string {
+  const projectName = extractProjectName(projectPath);
+  const today = new Date().toISOString().slice(0, 10);
+  return `${projectName}-session-${today}-${String(sequence).padStart(3, '0')}`;
+}
+
 const NewSessionTab: React.FC = () => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  // Form state
   const [project, setProject] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
+  const [sprint, setSprint] = useState('');
+  const [name, setName] = useState('');
+  const [nameEdited, setNameEdited] = useState(false);
+  const [description, setDescription] = useState('');
   const [recordMouseMove, setRecordMouseMove] = useState(false);
+
+  // Tab state
   const [activeTabUrl, setActiveTabUrl] = useState('');
   const [activeTabId, setActiveTabId] = useState<number | undefined>(undefined);
+
+  // Sprint auto-detect
+  const [sprints, setSprints] = useState<SprintEntry[]>([]);
+  const [sprintsLoading, setSprintsLoading] = useState(false);
+  const [projectExists, setProjectExists] = useState<boolean | null>(null);
+
+  // History
+  const [history, setHistory] = useState<SessionHistory>({ lastProject: '', lastSprint: '', recentProjects: [] });
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [existingProjects, setExistingProjects] = useState<string[]>([]);
   const [done, setDone] = useState(false);
-
-  // Save location state
-  const [globalOutputPath, setGlobalOutputPath] = useState('');
-  const [saveLocation, setSaveLocation] = useState('');
-  const [saveLocationEdited, setSaveLocationEdited] = useState(false);
+  const [sessionSequence, setSessionSequence] = useState(1);
 
   useEffect(() => {
-    // Read the origin tab stored by the popup before opening this tab
-    chrome.storage.local.get(['refineOriginTabId', 'refineOriginTabUrl'], (res) => {
+    chrome.storage.local.get(['refineOriginTabId', 'refineOriginTabUrl', HISTORY_KEY], (res) => {
       const tabId = res.refineOriginTabId as number | undefined;
       const tabUrl = (res.refineOriginTabUrl as string) || '';
       if (tabId) setActiveTabId(tabId);
       if (tabUrl) setActiveTabUrl(tabUrl);
+
+      const saved = res[HISTORY_KEY] as SessionHistory | undefined;
+      if (saved) {
+        setHistory(saved);
+        if (saved.lastProject) {
+          setProject(saved.lastProject);
+          if (saved.lastSprint) setSprint(saved.lastSprint);
+        }
+      }
     });
 
-    getAllSessions().then(sessions => {
-      const projects = Array.from(new Set(sessions.map(s => s.project).filter(Boolean))) as string[];
-      setExistingProjects(projects);
-    });
-
-    chrome.storage.local.get(['refineOutputPath'], (res) => {
-      const global = (res.refineOutputPath as string) || '';
-      setGlobalOutputPath(global);
-      if (!saveLocationEdited) setSaveLocation(global);
+    import('@core/db').then(({ getSessionsForToday }) => {
+      getSessionsForToday().then(sessions => {
+        setSessionSequence(sessions.length + 1);
+      });
     });
   }, []);
 
-  // Per-project save location override
+  // Auto-generate session name when project changes
   useEffect(() => {
-    if (!project.trim()) {
-      if (!saveLocationEdited) setSaveLocation(globalOutputPath);
+    if (!nameEdited && project.trim()) {
+      setName(generateSessionName(project.trim(), sessionSequence));
+    }
+  }, [project, sessionSequence, nameEdited]);
+
+  // Fetch sprints when project path changes (debounced)
+  const fetchSprints = useCallback((projectPath: string) => {
+    if (!projectPath.trim()) {
+      setSprints([]);
+      setProjectExists(null);
       return;
     }
-    const key = `refineOutputPath_${project.trim()}`;
-    chrome.storage.local.get([key], (res) => {
-      const perProject = res[key] as string | undefined;
-      if (perProject) {
-        setSaveLocation(perProject);
-      } else if (!saveLocationEdited) {
-        setSaveLocation(globalOutputPath);
-      }
-    });
-  }, [project]);
 
-  const handleSaveLocationChange = (val: string) => {
-    setSaveLocation(val);
-    setSaveLocationEdited(true);
+    setSprintsLoading(true);
+    chrome.runtime.sendMessage(
+      { type: MessageType.GET_PROJECT_SPRINTS, payload: { projectPath: projectPath.trim() }, source: 'new-session-tab' },
+      (response) => {
+        setSprintsLoading(false);
+        if (chrome.runtime.lastError || !response?.ok) {
+          setSprints([]);
+          setProjectExists(null);
+          return;
+        }
+        const data = response.data as { exists: boolean; sprints: SprintEntry[]; current: string | null };
+        setProjectExists(data.exists);
+        setSprints(data.sprints);
+        if (data.current && !sprint) {
+          setSprint(data.current);
+        }
+      }
+    );
+  }, [sprint]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchSprints(project), 500);
+    return () => clearTimeout(timer);
+  }, [project, fetchSprints]);
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    setNameEdited(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!project.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    const sessionName = name.trim() || generateSessionName(project.trim(), sessionSequence);
     const projectKey = project.trim();
+    const sprintKey = sprint.trim() || undefined;
 
-    if (projectKey && saveLocation && saveLocation !== globalOutputPath) {
-      chrome.storage.local.set({ [`refineOutputPath_${projectKey}`]: saveLocation });
-    }
-    if (saveLocation) {
-      chrome.storage.local.set({ refineOutputPath: saveLocation });
-    }
+    // Save history
+    const updatedHistory: SessionHistory = {
+      lastProject: projectKey,
+      lastSprint: sprintKey ?? '',
+      recentProjects: [projectKey, ...history.recentProjects.filter(p => p !== projectKey)].slice(0, 10),
+    };
+    chrome.storage.local.set({ [HISTORY_KEY]: updatedHistory });
 
     chrome.runtime.sendMessage(
       {
         type: MessageType.CREATE_SESSION,
         payload: {
-          name: name.trim(),
+          name: sessionName,
           description: description.trim(),
-          project: projectKey || undefined,
-          tags,
+          project: projectKey,
+          sprint: sprintKey,
+          tags: [],
           url: activeTabUrl,
           tabId: activeTabId,
           recordMouseMove,
@@ -115,7 +172,6 @@ const NewSessionTab: React.FC = () => {
         }
         if (response?.ok) {
           setDone(true);
-          // Switch back to the target tab so the user sees the control bar, then close this tab
           if (activeTabId) {
             chrome.tabs.update(activeTabId, { active: true }, () => {
               setTimeout(() => window.close(), 400);
@@ -138,7 +194,7 @@ const NewSessionTab: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-3">✅</div>
+          <div className="text-4xl mb-3">{'\u2705'}</div>
           <p className="text-white font-semibold text-lg">Recording started!</p>
           <p className="text-gray-400 text-sm mt-1">Switch back to your target tab — the control bar is active.</p>
         </div>
@@ -153,8 +209,8 @@ const NewSessionTab: React.FC = () => {
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-gray-800">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-indigo-400 text-lg">⬡</span>
-            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold">SynaptixLabs Refine</span>
+            <span className="text-indigo-400 text-lg">{'\u2B21'}</span>
+            <span className="text-xs text-gray-500 uppercase tracking-widest font-semibold">SynaptixLabs Vigil</span>
           </div>
           <h1 className="text-xl font-bold text-white">New Session</h1>
           {activeTabUrl && (
@@ -165,43 +221,77 @@ const NewSessionTab: React.FC = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
 
-          {/* 1. Project */}
+          {/* 1. Project (REQUIRED) */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Project <span className="text-gray-600 font-normal">(optional)</span>
+              Project <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
               list="projects-list"
               data-testid="input-project-name"
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. internal-dashboard"
+              placeholder="e.g. C:\Synaptix-Labs\projects\vigil"
               value={project}
-              onChange={(e) => { setProject(e.target.value); setSaveLocationEdited(false); }}
+              onChange={(e) => setProject(e.target.value)}
+              autoFocus
+              required
             />
             <datalist id="projects-list">
-              {existingProjects.map(p => <option key={p} value={p} />)}
+              {history.recentProjects.map(p => <option key={p} value={p} />)}
             </datalist>
+            {project.trim() && projectExists === false && (
+              <p className="mt-1 text-[10px] text-yellow-500">Folder not found — sprint auto-detect unavailable</p>
+            )}
           </div>
 
-          {/* 2. Session Name */}
+          {/* 2. Sprint (auto-detected or manual) */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Session Name *
+            <label className="block text-xs font-semibold text-gray-400 mb-1">
+              Sprint
+              {sprintsLoading && <span className="ml-1.5 text-gray-600 font-normal">detecting...</span>}
+            </label>
+            {sprints.length > 0 ? (
+              <select
+                data-testid="select-sprint"
+                value={sprint}
+                onChange={(e) => setSprint(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              >
+                <option value="">— Select sprint —</option>
+                {sprints.map(s => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                data-testid="input-sprint"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                placeholder="e.g. sprint_07"
+                value={sprint}
+                onChange={(e) => setSprint(e.target.value)}
+              />
+            )}
+          </div>
+
+          {/* 3. Session Name (auto-generated, editable) */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">
+              Session Name
+              {!nameEdited && project.trim() && <span className="ml-1.5 text-gray-600 font-normal">(auto)</span>}
             </label>
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Login flow QA pass"
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Auto-generated from project"
               data-testid="input-session-name"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
-              autoFocus
-              required
             />
           </div>
 
-          {/* 3. Description */}
+          {/* 4. Description */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1">
               Description <span className="text-gray-600 font-normal">(optional)</span>
@@ -212,54 +302,11 @@ const NewSessionTab: React.FC = () => {
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              data-testid="input-description"
             />
           </div>
 
-          {/* 4. Tags */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Tags <span className="text-gray-600 font-normal">(comma-separated)</span>
-            </label>
-            <input
-              type="text"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. smoke-test, checkout, mobile"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-            />
-          </div>
-
-          {/* 5. Save Location */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Save Location
-              {project.trim() && saveLocation !== globalOutputPath && (
-                <span className="ml-1.5 text-indigo-400 font-normal">(project override)</span>
-              )}
-              {!globalOutputPath && (
-                <span className="ml-1.5 text-yellow-500 font-normal">— set in Options for default</span>
-              )}
-            </label>
-            <input
-              type="text"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. C:\QA\RefineOutput"
-              value={saveLocation}
-              onChange={(e) => handleSaveLocationChange(e.target.value)}
-              data-testid="input-save-location"
-            />
-            {globalOutputPath && saveLocation !== globalOutputPath && (
-              <button
-                type="button"
-                onClick={() => { setSaveLocation(globalOutputPath); setSaveLocationEdited(false); }}
-                className="mt-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                ↩ Reset to global default
-              </button>
-            )}
-          </div>
-
-          {/* 6. Record mouse movements */}
+          {/* 5. Record mouse movements */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -291,11 +338,11 @@ const NewSessionTab: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || loading}
+              disabled={!project.trim() || loading}
               data-testid="btn-start-recording"
               className="flex-[2] py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
             >
-              {loading ? 'Starting…' : '▶ Start Session'}
+              {loading ? 'Starting\u2026' : '\u25B6 Start Session'}
             </button>
           </div>
         </form>

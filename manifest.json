@@ -57,7 +57,7 @@
       "description": "Capture screenshot"
     },
     "open-bug-editor": {
-      "suggested_key": { "default": "Ctrl+Shift+B", "mac": "Command+Shift+B" },
+      "suggested_key": { "default": "Alt+Shift+B", "mac": "Alt+Shift+B" },
       "description": "Open bug editor"
     }
   },

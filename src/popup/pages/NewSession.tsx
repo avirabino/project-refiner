@@ -1,37 +1,70 @@
 /**
  * @file NewSession.tsx
- * @description New session creation form. Sends CREATE_SESSION to background.
+ * @description Project-oriented session creation form (S07-16).
+ * Sends CREATE_SESSION to background with project, sprint, auto-generated name.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MessageType } from '@shared/types';
 import type { Session } from '@shared/types';
-import { getAllSessions } from '@core/db';
 
 interface NewSessionProps {
   onBack: () => void;
   onCreated: (session: Session) => void;
 }
 
+interface SprintEntry {
+  id: string;
+  name: string;
+}
+
+interface SessionHistory {
+  lastProject: string;
+  lastSprint: string;
+  recentProjects: string[];
+}
+
+const HISTORY_KEY = 'vigilSessionHistory';
+
+function extractProjectName(path: string): string {
+  const segments = path.replace(/\\/g, '/').split('/').filter(Boolean);
+  return segments[segments.length - 1] || 'session';
+}
+
+function generateSessionName(projectPath: string, sequence: number): string {
+  const projectName = extractProjectName(projectPath);
+  const today = new Date().toISOString().slice(0, 10);
+  return `${projectName}-session-${today}-${String(sequence).padStart(3, '0')}`;
+}
+
 const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
+  // Form state
+  const [project, setProject] = useState('');
+  const [sprint, setSprint] = useState('');
   const [name, setName] = useState('');
+  const [nameEdited, setNameEdited] = useState(false);
   const [description, setDescription] = useState('');
-  const [project, setProject] = useState(''); // R025
-  const [tagsInput, setTagsInput] = useState(''); // R020
   const [recordMouseMove, setRecordMouseMove] = useState(false);
+
+  // Tab state
   const [activeTabUrl, setActiveTabUrl] = useState('');
   const [activeTabId, setActiveTabId] = useState<number | undefined>(undefined);
+
+  // Sprint auto-detect
+  const [sprints, setSprints] = useState<SprintEntry[]>([]);
+  const [sprintsLoading, setSprintsLoading] = useState(false);
+  const [projectExists, setProjectExists] = useState<boolean | null>(null);
+
+  // History
+  const [history, setHistory] = useState<SessionHistory>({ lastProject: '', lastSprint: '', recentProjects: [] });
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [existingProjects, setExistingProjects] = useState<string[]>([]);
+  const [sessionSequence, setSessionSequence] = useState(1);
 
-  // Save location: global default from Options, overridable per-project
-  const [globalOutputPath, setGlobalOutputPath] = useState('');
-  const [saveLocation, setSaveLocation] = useState('');
-  const [saveLocationEdited, setSaveLocationEdited] = useState(false);
-
+  // Load history + active tab on mount
   useEffect(() => {
-    // In the side panel, currentWindow refers to the browser window the panel is attached to.
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const target = tabs.find(
         t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://')
@@ -44,67 +77,100 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
       }
     });
 
-    getAllSessions().then(sessions => {
-      const projects = Array.from(new Set(sessions.map(s => s.project).filter(Boolean))) as string[];
-      setExistingProjects(projects);
+    chrome.storage.local.get([HISTORY_KEY], (res) => {
+      const saved = res[HISTORY_KEY] as SessionHistory | undefined;
+      if (saved) {
+        setHistory(saved);
+        if (saved.lastProject) {
+          setProject(saved.lastProject);
+          if (saved.lastSprint) setSprint(saved.lastSprint);
+        }
+      }
     });
 
-    chrome.storage.local.get(['refineOutputPath'], (res) => {
-      const global = (res.refineOutputPath as string) || '';
-      setGlobalOutputPath(global);
-      if (!saveLocationEdited) setSaveLocation(global);
+    // Count today's sessions for auto-name sequence
+    import('@core/db').then(({ getSessionsForToday }) => {
+      getSessionsForToday().then(sessions => {
+        setSessionSequence(sessions.length + 1);
+      });
     });
   }, []);
 
-  // When project changes, check for a per-project saved output path override
+  // Auto-generate session name when project changes (unless user edited)
   useEffect(() => {
-    if (!project.trim()) {
-      if (!saveLocationEdited) setSaveLocation(globalOutputPath);
+    if (!nameEdited && project.trim()) {
+      setName(generateSessionName(project.trim(), sessionSequence));
+    }
+  }, [project, sessionSequence, nameEdited]);
+
+  // Fetch sprints when project path changes (debounced)
+  const fetchSprints = useCallback((projectPath: string) => {
+    if (!projectPath.trim()) {
+      setSprints([]);
+      setProjectExists(null);
       return;
     }
-    const key = `refineOutputPath_${project.trim()}`;
-    chrome.storage.local.get([key], (res) => {
-      const perProject = res[key] as string | undefined;
-      if (perProject) {
-        setSaveLocation(perProject);
-      } else if (!saveLocationEdited) {
-        setSaveLocation(globalOutputPath);
-      }
-    });
-  }, [project]);
 
-  const handleSaveLocationChange = (val: string) => {
-    setSaveLocation(val);
-    setSaveLocationEdited(true);
+    setSprintsLoading(true);
+    chrome.runtime.sendMessage(
+      { type: MessageType.GET_PROJECT_SPRINTS, payload: { projectPath: projectPath.trim() }, source: 'popup' },
+      (response) => {
+        setSprintsLoading(false);
+        if (chrome.runtime.lastError || !response?.ok) {
+          setSprints([]);
+          setProjectExists(null);
+          return;
+        }
+        const data = response.data as { exists: boolean; sprints: SprintEntry[]; current: string | null };
+        setProjectExists(data.exists);
+        setSprints(data.sprints);
+        if (data.current && !sprint) {
+          setSprint(data.current);
+        }
+      }
+    );
+  }, [sprint]);
+
+  // Debounce project path changes
+  useEffect(() => {
+    const timer = setTimeout(() => fetchSprints(project), 500);
+    return () => clearTimeout(timer);
+  }, [project, fetchSprints]);
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    setNameEdited(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!project.trim()) return;
 
     setLoading(true);
     setError(null);
 
-    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    const sessionName = name.trim() || generateSessionName(project.trim(), sessionSequence);
     const projectKey = project.trim();
+    const sprintKey = sprint.trim() || undefined;
 
-    // Persist per-project override if it differs from global
-    if (projectKey && saveLocation && saveLocation !== globalOutputPath) {
-      chrome.storage.local.set({ [`refineOutputPath_${projectKey}`]: saveLocation });
-    }
-    // Also update the active global key so background picks it up for this session
-    if (saveLocation) {
-      chrome.storage.local.set({ refineOutputPath: saveLocation });
-    }
+    // Save history
+    const updatedHistory: SessionHistory = {
+      lastProject: projectKey,
+      lastSprint: sprintKey ?? '',
+      recentProjects: [projectKey, ...history.recentProjects.filter(p => p !== projectKey)].slice(0, 10),
+    };
+    chrome.storage.local.set({ [HISTORY_KEY]: updatedHistory });
+    setHistory(updatedHistory);
 
     chrome.runtime.sendMessage(
       {
         type: MessageType.CREATE_SESSION,
         payload: {
-          name: name.trim(),
+          name: sessionName,
           description: description.trim(),
-          project: projectKey || undefined,
-          tags,
+          project: projectKey,
+          sprint: sprintKey,
+          tags: [],
           url: activeTabUrl,
           tabId: activeTabId,
           recordMouseMove,
@@ -128,52 +194,89 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-gray-800 flex-shrink-0">
         <h2 className="text-base font-bold text-white flex-1">New Session</h2>
       </div>
 
-      {/* ── Scrollable form body ── */}
+      {/* Scrollable form body */}
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-2">
 
-          {/* 1. Project (first) */}
+          {/* 1. Project (REQUIRED) */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Project <span className="text-gray-600 font-normal">(optional)</span>
+              Project <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
               list="projects-list"
               data-testid="input-project-name"
               className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. internal-dashboard"
+              placeholder="e.g. C:\Synaptix-Labs\projects\vigil"
               value={project}
-              onChange={(e) => { setProject(e.target.value); setSaveLocationEdited(false); }}
+              onChange={(e) => setProject(e.target.value)}
+              autoFocus
+              required
             />
             <datalist id="projects-list">
-              {existingProjects.map(p => <option key={p} value={p} />)}
+              {history.recentProjects.map(p => <option key={p} value={p} />)}
             </datalist>
+            {project.trim() && projectExists === false && (
+              <p className="mt-1 text-[10px] text-yellow-500">Folder not found — sprint auto-detect unavailable</p>
+            )}
+            {project.trim() && projectExists === true && sprints.length === 0 && (
+              <p className="mt-1 text-[10px] text-gray-500">No docs/sprints/ folder found — enter sprint manually</p>
+            )}
           </div>
 
-          {/* 2. Session Name */}
+          {/* 2. Sprint (auto-detected or manual) */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Session Name *
+            <label className="block text-xs font-semibold text-gray-400 mb-1">
+              Sprint
+              {sprintsLoading && <span className="ml-1.5 text-gray-600 font-normal">detecting...</span>}
+            </label>
+            {sprints.length > 0 ? (
+              <select
+                data-testid="select-sprint"
+                value={sprint}
+                onChange={(e) => setSprint(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              >
+                <option value="">— Select sprint —</option>
+                {sprints.map(s => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                data-testid="input-sprint"
+                className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                placeholder="e.g. sprint_07"
+                value={sprint}
+                onChange={(e) => setSprint(e.target.value)}
+              />
+            )}
+          </div>
+
+          {/* 3. Session Name (auto-generated, editable) */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1">
+              Session Name
+              {!nameEdited && project.trim() && <span className="ml-1.5 text-gray-600 font-normal">(auto)</span>}
             </label>
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Login flow QA pass"
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Auto-generated from project"
               data-testid="input-session-name"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
-              autoFocus
-              required
             />
           </div>
 
-          {/* 3. Description */}
+          {/* 4. Description */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1">
               Description <span className="text-gray-600 font-normal">(optional)</span>
@@ -184,54 +287,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
               rows={1}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              data-testid="input-description"
             />
           </div>
 
-          {/* 4. Tags */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Tags <span className="text-gray-600 font-normal">(comma-separated)</span>
-            </label>
-            <input
-              type="text"
-              className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. smoke-test, checkout, mobile"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-            />
-          </div>
-
-          {/* 5. Save Location */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1">
-              Save Location
-              {project.trim() && saveLocation !== globalOutputPath && (
-                <span className="ml-1.5 text-indigo-400 font-normal">(project override)</span>
-              )}
-              {!globalOutputPath && (
-                <span className="ml-1.5 text-yellow-500 font-normal">— set in Options for default</span>
-              )}
-            </label>
-            <input
-              type="text"
-              className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. C:\\QA\\RefineOutput"
-              value={saveLocation}
-              onChange={(e) => handleSaveLocationChange(e.target.value)}
-              data-testid="input-save-location"
-            />
-            {globalOutputPath && saveLocation !== globalOutputPath && (
-              <button
-                type="button"
-                onClick={() => { setSaveLocation(globalOutputPath); setSaveLocationEdited(false); }}
-                className="mt-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                ↩ Reset to global default
-              </button>
-            )}
-          </div>
-
-          {/* 6. Record mouse movements */}
+          {/* 5. Record mouse movements */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -246,16 +306,13 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
             </label>
           </div>
 
-          {/* 7. Starting URL (read-only) */}
+          {/* 6. Starting URL (read-only) */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
               Starting URL
             </label>
             <div className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-500 truncate" title={activeTabUrl}>
-              {activeTabUrl || 'Loading…'}
-            </div>
-            <div className="mt-1 text-[10px] text-gray-600 font-mono">
-              Tab ID: {activeTabId ?? 'None'}
+              {activeTabUrl || 'Loading\u2026'}
             </div>
           </div>
 
@@ -266,7 +323,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
           )}
         </div>
 
-        {/* ── Sticky footer: Cancel + Start Recording ── */}
+        {/* Sticky footer: Cancel + Start Session */}
         <div className="flex gap-2 px-4 py-2 border-t border-gray-800 flex-shrink-0 bg-gray-950">
           <button
             type="button"
@@ -277,11 +334,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
           </button>
           <button
             type="submit"
-            disabled={!name.trim() || loading}
+            disabled={!project.trim() || loading}
             data-testid="btn-start-recording"
             className="flex-[2] py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
           >
-            {loading ? 'Starting…' : '▶ Start Session'}
+            {loading ? 'Starting\u2026' : '\u25B6 Start Session'}
           </button>
         </div>
       </form>
