@@ -48,33 +48,39 @@ vigil-ext  →  vigil-server (:7474)
 
 **Phase 1 total: ~21.5V** | **Gate: FAT Round 3 — Founder sign-off required before Phase 2**
 
-### 🔧 PHASE 2 — Backend + LLM + Agent (Week 2-3, ~31V)
+### 🔧 PHASE 2 — Backend Infrastructure (Week 2-3)
 
-> Phase 2 items with NO Phase 1 dependency can start parallel during Week 2.
-> AGENTS-dependent items unblock in Week 3 after S07-01 ships.
+> **D029 (2026-03-01):** All AI/AGENTS work deferred to Sprint 08. Phase 2 is now BE-only: Neon + Vercel + QA.
 
 | ID | Track | Deliverable | Priority | Cost | Owner | Phase | Week |
 |---|---|---|---|---|---|---|---|
-| S07-01 | AGENTS | Add `/api/v1/vigil/suggest` endpoint to AGENTS project | 🟠 P1 | ~4V | `[DEV:ai]` | 2 | W2 |
-| S07-02 | AGENTS | `llm_core` prompt templates for bug auto-complete + similarity | 🟠 P1 | ~3V | `[DEV:ai]` | 2 | W3 |
-| S07-03 | AGENTS | `resource_manager` Vigil usage tracking (project_id=vigil) | 🟡 P2 | ~2V | `[DEV:ai]` | 2 | W3 |
-| S07-04 | SERVER | Flip `VIGIL_LLM_MODE=live`, wire vigil-server → AGENTS API | 🟠 P1 | ~2V | `[DEV:ai]` | 2 | W3 |
-| S07-05 | SERVER | Returning bug detection: semantic similarity on new bug receipt | 🟠 P1 | ~3V | `[DEV:app]` | 2 | W3 |
-| S07-06 | EXT | Bug auto-complete in editor (title + steps pre-fill from LLM) | 🟠 P1 | ~3V | `[DEV:ai]` | 2 | W3 |
-| S07-07 | SERVER | Severity auto-suggest (confidence score shown, user overrides) | 🟡 P2 | ~2V | `[DEV:app]` | 2 | W3 |
-| S07-08a | AGENT | `vigil_agent` scaffold: `/project:vigil-agent` command + config (max time, cost, dry-run) | 🟠 P1 | ~1V | `[DEV:ai]` | 1 | W1 |
-| S07-08b | AGENT | Bug analysis + classification (reproducible / needs-info / code-defect / UX-issue) | 🟠 P1 | ~1.5V | `[DEV:ai]` | 2 | W3 |
-| S07-08c | AGENT | Regression test generation + red confirmation | 🟠 P1 | ~1.5V | `[DEV:ai]` | 2 | W3 |
-| S07-08d | AGENT | Fix implementation + green confirmation + git commit to branch | 🟠 P1 | ~1V | `[DEV:ai]` | 2 | W3 |
-| S07-09 | AGENT | Sprint health report (LLM-generated summary of open bugs + risk) | 🟡 P2 | ~2V | `[DEV:ai]` | 2 | W3 |
-| S07-10 | QA | Integration tests: ext → server → AGENTS round-trip | 🟡 P2 | ~2V | `[QA]` | 2 | W3 |
-| S07-14 | INFRA | Vercel deployment: vigil-server (serverless) + dashboard (static) | 🟡 P2 | ~2V | `[DEV:app]` | 2 | W3 |
 | S07-15 | SERVER | Neon PostgreSQL: migrate bug/feature storage from filesystem to managed Postgres | 🟠 P1 | ~4V | `[DEV:app]` | 2 | W2 |
+| S07-14 | INFRA | Vercel deployment: vigil-server (serverless) + dashboard (static) | 🟠 P1 | ~2V | `[DEV:app]` | 2 | W3 |
 | S07-22 | QA | HTTP route integration tests (S06 Track B review B03 carry-forward) | 🟡 P2 | ~1.5V | `[QA]` | 2 | W3 |
 
-**Phase 2 total: ~35V (core P1: ~25V, stretch P2: ~10V)**
+**Phase 2 total: ~7.5V**
 
-**Total: ~55V** (Phase 1: ~20V, Phase 2: ~35V — includes 6V carry-forward, 6V cloud infra, 14V Founder vision)
+### ⏸️ DEFERRED TO SPRINT 08 — AI/AGENTS (D029)
+
+| ID | Track | Deliverable | Original Priority | Cost | Reason |
+|---|---|---|---|---|---|
+| S07-01 | AGENTS | `/api/v1/vigil/suggest` endpoint | 🟠 P1 | ~4V | AI |
+| S07-02 | AGENTS | `llm_core` prompt templates | 🟠 P1 | ~3V | AI |
+| S07-03 | AGENTS | `resource_manager` tracking | 🟡 P2 | ~2V | AI |
+| S07-04 | SERVER | Flip `VIGIL_LLM_MODE=live` | 🟠 P1 | ~2V | AI |
+| S07-05 | SERVER | Returning bug detection | 🟠 P1 | ~3V | Needs AGENTS |
+| S07-06 | EXT | Bug auto-complete in editor | 🟠 P1 | ~3V | Needs AGENTS |
+| S07-07 | SERVER | Severity auto-suggest | 🟡 P2 | ~2V | Needs AGENTS |
+| S07-08a | AGENT | `vigil_agent` scaffold | 🟠 P1 | ~1V | AI |
+| S07-08b | AGENT | Bug analysis + classification | 🟠 P1 | ~1.5V | AI |
+| S07-08c | AGENT | Regression test generation | 🟠 P1 | ~1.5V | AI |
+| S07-08d | AGENT | Fix implementation + commit | 🟠 P1 | ~1V | AI |
+| S07-09 | AGENT | Sprint health report | 🟡 P2 | ~2V | AI |
+| S07-10 | QA | AGENTS round-trip integration tests | 🟡 P2 | ~2V | Needs AGENTS |
+
+**Deferred total: ~28V → Sprint 08**
+
+**Sprint 07 revised total: ~29V** (Phase 1: ~21.5V, Phase 2: ~7.5V)
 
 > **⚡ RESTRUCTURED per CPTO Design Review (2026-02-27):** Sprint split into Phase 1 (UX) + Phase 2 (Backend) with FAT Round 3 gate. S07-16 promoted to P0. S07-17/18/19 promoted to P1. S07-01/04 demoted from P0 to P1. S07-20/21/22 added for carry-forward bugs + deferred review items. See `sprint_07_plan.md` for full design review.
 >
