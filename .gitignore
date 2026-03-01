@@ -141,3 +141,5 @@ temp/
 
 # Vitest
 vitest.config.ts.timestamp-*
+
+.vercel
