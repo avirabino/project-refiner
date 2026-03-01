@@ -3,7 +3,7 @@
   "version": 2,
   "framework": null,
   "installCommand": "npm install && cd packages/shared && npm install && cd ../server && npm install",
-  "buildCommand": "cd packages/shared && npx tsc && cd ../server && npx tsc",
+  "buildCommand": "cd packages/shared && npx -p typescript tsc && cd ../server && npx -p typescript tsc",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
   ]
