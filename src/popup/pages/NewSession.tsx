@@ -53,7 +53,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
   const [error, setError] = useState<string | null>(null);
   const [sessionSequence, setSessionSequence] = useState(1);
 
-  // Load history + active tab on mount
+  // Load history + active tab + config sprint on mount
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const target = tabs.find(
@@ -77,6 +77,16 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
         }
       }
     });
+
+    // Read sprintCurrent from bundled vigil.config.json as fallback
+    fetch(chrome.runtime.getURL('vigil.config.json'))
+      .then(r => r.json())
+      .then((config: { sprintCurrent?: string }) => {
+        if (config.sprintCurrent) {
+          setSprint(prev => prev || config.sprintCurrent!);
+        }
+      })
+      .catch(() => {});
 
     // Count today's sessions for auto-name sequence
     import('@core/db').then(({ getSessionsForToday }) => {
@@ -203,7 +213,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
               list="projects-list"
               data-testid="input-project-name"
               className="w-full bg-gray-900 border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. C:\Synaptix-Labs\projects\vigil"
+              placeholder="e.g. TaskPilot"
               value={project}
               onChange={(e) => setProject(e.target.value)}
               autoFocus
