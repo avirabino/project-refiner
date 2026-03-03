@@ -222,8 +222,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
             <datalist id="projects-list">
               {history.recentProjects.map(p => <option key={p} value={p} />)}
             </datalist>
-            {project.trim() && projectExists === false && (
-              <p className="mt-1 text-[10px] text-yellow-500">Folder not found — sprint auto-detect unavailable</p>
+            {project.trim() && projectExists === false && !sprint && (
+              <p className="mt-1 text-[10px] text-yellow-500">Folder not found — enter sprint manually</p>
             )}
             {project.trim() && projectExists === true && sprints.length === 0 && (
               <p className="mt-1 text-[10px] text-gray-500">No docs/sprints/ folder found — enter sprint manually</p>
