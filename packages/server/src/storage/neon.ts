@@ -264,6 +264,12 @@ export class NeonStorage implements StorageProvider {
     return session.id;
   }
 
+  async deleteSession(sessionId: string): Promise<boolean> {
+    const pool = getPool();
+    const result = await pool.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   async nextBugId(): Promise<string> {
     const pool = getPool();
     const result = await pool.query("SELECT nextval('bug_counter') AS val");

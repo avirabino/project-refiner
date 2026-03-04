@@ -54,6 +54,11 @@ export class FilesystemStorage implements StorageProvider {
     return getSession(sessionId);
   }
 
+  async deleteSession(_sessionId: string): Promise<boolean> {
+    // Filesystem deletion not implemented — Neon is primary storage
+    return false;
+  }
+
   nextBugId(): Promise<string> {
     return nextBugId();
   }

@@ -84,6 +84,23 @@ sessionsRouter.get('/', async (req, res) => {
   }
 });
 
+// DELETE /api/sessions/:id
+sessionsRouter.delete('/:id', async (req, res) => {
+  const storage = getStorage();
+
+  try {
+    const deleted = await storage.deleteSession(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+    res.json({ ok: true, deletedId: req.params.id });
+  } catch (err) {
+    console.error('[vigil-server] Error deleting session:', err);
+    res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
+
 // GET /api/sessions/:id
 sessionsRouter.get('/:id', async (req, res) => {
   const storage = getStorage();

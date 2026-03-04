@@ -24,6 +24,7 @@ export interface StorageProvider {
   writeSessionJson(session: VIGILSession): Promise<string>;
   listSessions(project?: string, sprint?: string): Promise<VIGILSession[]>;
   getSession(sessionId: string): Promise<VIGILSession | null>;
+  deleteSession(sessionId: string): Promise<boolean>;
 
   // Counters
   nextBugId(): Promise<string>;

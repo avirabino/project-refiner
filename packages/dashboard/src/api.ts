@@ -72,6 +72,11 @@ export async function fetchSessions(
   return data.sessions ?? [];
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Failed to delete session: ${res.status}`);
+}
+
 export async function fetchSession(sessionId: string): Promise<SessionDetail> {
   const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}`);
   if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`);
