@@ -325,6 +325,7 @@ async function loadServerConfig(): Promise<void> {
       // If serverUrl is set, POST directly there (e.g. Vercel).
       // Otherwise fall back to localhost:<port>.
       cachedServerUrl = config.serverUrl ?? `http://localhost:${cachedServerPort}`;
+      console.log('[Vigil] Server config loaded → URL:', cachedServerUrl);
       return;
     }
   } catch {
@@ -332,6 +333,7 @@ async function loadServerConfig(): Promise<void> {
   }
   cachedServerPort = 7474;
   cachedServerUrl = 'http://localhost:7474';
+  console.log('[Vigil] Server config fallback → URL:', cachedServerUrl);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -340,6 +342,7 @@ function sleep(ms: number): Promise<void> {
 
 async function postWithRetry(session: VIGILSession, attempts = 3): Promise<void> {
   const serverUrl = await loadServerUrl();
+  console.log(`[Vigil] postWithRetry → ${serverUrl}/api/session (session: ${session.id}, bugs: ${session.bugs.length}, features: ${session.features.length})`);
 
   for (let i = 0; i < attempts; i++) {
     try {
@@ -349,17 +352,21 @@ async function postWithRetry(session: VIGILSession, attempts = 3): Promise<void>
         body: JSON.stringify(session),
       });
       if (res.ok) {
+        console.log(`[Vigil] POST success → session ${session.id} synced to ${serverUrl}`);
         notifyTab(vigilState.tabId, 'SESSION_SYNCED');
         return;
       }
       // Log server-side validation errors (e.g. Zod schema failures)
       const errBody = await res.text().catch(() => '');
-      console.error(`[Vigil] POST /api/session failed (${res.status}):`, errBody);
-    } catch {
+      console.error(`[Vigil] POST /api/session failed (${res.status}, attempt ${i + 1}/${attempts}):`, errBody);
+      await sleep(1000 * (i + 1));
+    } catch (e) {
+      console.warn(`[Vigil] POST /api/session network error (attempt ${i + 1}/${attempts}):`, e);
       await sleep(1000 * (i + 1));
     }
   }
   // All retries failed — mark pending
+  console.error(`[Vigil] POST /api/session failed after ${attempts} attempts — session ${session.id} marked pendingSync`);
   if (vigilState.session) {
     vigilState.session.pendingSync = true;
   }

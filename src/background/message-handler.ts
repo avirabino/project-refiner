@@ -123,6 +123,7 @@ export function handleMessage(
           // Sprint 06 BUG-FAT-001: Also end vigil session if active → triggers POST to vigil-server
           // Runs AFTER sendResponse to avoid blocking callers (ControlBar, popup)
           // S07-FAT: Re-start keep-alive — legacy stopSession() killed it, but vigil POST still needs it
+          console.log('[Vigil] STOP_RECORDING: vigil session active?', vigilSessionManager.hasActiveSession(), 'id:', vigilSessionManager.getActiveSessionId());
           if (vigilSessionManager.hasActiveSession()) {
             try {
               startKeepAlive();

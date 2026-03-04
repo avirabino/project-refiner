@@ -26,6 +26,7 @@ function toDetail(s: VIGILSession) {
     id: s.id,
     project: s.projectId,
     sprint: s.sprint ?? '',
+    description: s.description ?? '',
     name: s.name,
     startedAt: s.startedAt,
     endedAt: s.endedAt,

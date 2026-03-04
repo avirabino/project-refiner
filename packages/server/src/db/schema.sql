@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   snapshots JSONB DEFAULT '[]'::jsonb,
   bugs JSONB DEFAULT '[]'::jsonb,
   features JSONB DEFAULT '[]'::jsonb,
+  sprint TEXT,
+  description TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

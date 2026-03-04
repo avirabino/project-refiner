@@ -56,6 +56,27 @@ ${description ? `\n## Description\n${description}` : ''}`;
   return { id, title, status, priority, sprint, description, raw };
 }
 
+const SESSION_SELECT_COLS = 'id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, sprint, description';
+
+function rowToSession(row: Record<string, unknown>): VIGILSession | null {
+  const obj = {
+    id: row.id as string,
+    name: row.name as string,
+    projectId: row.project_id as string,
+    sprint: (row.sprint as string | null) ?? undefined,
+    description: (row.description as string | null) ?? undefined,
+    startedAt: Number(row.started_at),
+    endedAt: row.ended_at != null ? Number(row.ended_at) : undefined,
+    clock: Number(row.clock),
+    recordings: typeof row.recordings === 'string' ? JSON.parse(row.recordings) : row.recordings,
+    snapshots: typeof row.snapshots === 'string' ? JSON.parse(row.snapshots) : row.snapshots,
+    bugs: typeof row.bugs === 'string' ? JSON.parse(row.bugs) : row.bugs,
+    features: typeof row.features === 'string' ? JSON.parse(row.features) : row.features,
+  };
+  const parsed = VIGILSessionSchema.safeParse(obj);
+  return parsed.success ? parsed.data : null;
+}
+
 export class NeonStorage implements StorageProvider {
   readonly name = 'neon';
 
@@ -215,8 +236,8 @@ export class NeonStorage implements StorageProvider {
     const pool = getPool();
 
     await pool.query(
-      `INSERT INTO sessions (id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `INSERT INTO sessions (id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, sprint, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         session.id,
         session.name,
@@ -228,6 +249,8 @@ export class NeonStorage implements StorageProvider {
         JSON.stringify(session.snapshots),
         JSON.stringify(session.bugs),
         JSON.stringify(session.features),
+        session.sprint ?? null,
+        session.description ?? null,
       ],
     );
 
@@ -271,36 +294,20 @@ export class NeonStorage implements StorageProvider {
       values.push(project);
     }
     if (sprint) {
-      // Session sprint is stored inside the JSON, but we also query by the sprint field
-      // extracted at write time. For sessions table, sprint is embedded in session data.
-      // Filter post-query since sprint is in the JSON payload.
+      conditions.push(`sprint = $${idx++}`);
+      values.push(sprint);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
-      `SELECT id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features FROM sessions ${where} ORDER BY started_at DESC`,
+      `SELECT ${SESSION_SELECT_COLS} FROM sessions ${where} ORDER BY started_at DESC`,
       values,
     );
 
     const sessions: VIGILSession[] = [];
     for (const row of result.rows) {
-      const obj = {
-        id: row.id as string,
-        name: row.name as string,
-        projectId: row.project_id as string,
-        sprint: undefined as string | undefined,
-        startedAt: Number(row.started_at),
-        endedAt: row.ended_at != null ? Number(row.ended_at) : undefined,
-        clock: Number(row.clock),
-        recordings: typeof row.recordings === 'string' ? JSON.parse(row.recordings) : row.recordings,
-        snapshots: typeof row.snapshots === 'string' ? JSON.parse(row.snapshots) : row.snapshots,
-        bugs: typeof row.bugs === 'string' ? JSON.parse(row.bugs) : row.bugs,
-        features: typeof row.features === 'string' ? JSON.parse(row.features) : row.features,
-      };
-      const parsed = VIGILSessionSchema.safeParse(obj);
-      if (!parsed.success) continue;
-      if (sprint && parsed.data.sprint !== sprint) continue;
-      sessions.push(parsed.data);
+      const session = rowToSession(row);
+      if (session) sessions.push(session);
     }
 
     return sessions;
@@ -309,27 +316,12 @@ export class NeonStorage implements StorageProvider {
   async getSession(sessionId: string): Promise<VIGILSession | null> {
     const pool = getPool();
     const result = await pool.query(
-      'SELECT id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features FROM sessions WHERE id = $1',
+      `SELECT ${SESSION_SELECT_COLS} FROM sessions WHERE id = $1`,
       [sessionId],
     );
 
     if (result.rows.length === 0) return null;
-
-    const row = result.rows[0];
-    const obj = {
-      id: row.id as string,
-      name: row.name as string,
-      projectId: row.project_id as string,
-      startedAt: Number(row.started_at),
-      endedAt: row.ended_at != null ? Number(row.ended_at) : undefined,
-      clock: Number(row.clock),
-      recordings: typeof row.recordings === 'string' ? JSON.parse(row.recordings) : row.recordings,
-      snapshots: typeof row.snapshots === 'string' ? JSON.parse(row.snapshots) : row.snapshots,
-      bugs: typeof row.bugs === 'string' ? JSON.parse(row.bugs) : row.bugs,
-      features: typeof row.features === 'string' ? JSON.parse(row.features) : row.features,
-    };
-    const parsed = VIGILSessionSchema.safeParse(obj);
-    return parsed.success ? parsed.data : null;
+    return rowToSession(result.rows[0]);
   }
 
   async listSprints(): Promise<{ sprints: SprintInfo[]; current: string }> {
