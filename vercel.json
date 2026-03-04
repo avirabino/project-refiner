@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": null,
-  "installCommand": "npm install && cd packages/shared && npm install && cd ../server && npm install --include=dev",
-  "buildCommand": "cd packages/shared && npx -p typescript tsc && cd ../server && npx -p typescript tsc && mkdir -p ../../.vercel_static && echo ok > ../../.vercel_static/health.txt",
+  "installCommand": "npm install && cd packages/shared && npm install && cd ../server && npm install --include=dev && cd ../dashboard && npm install",
+  "buildCommand": "cd packages/shared && npx -p typescript tsc && cd ../server && npx -p typescript tsc && cd ../dashboard && npx vite build && mkdir -p ../../.vercel_static/dashboard && cp -r ../server/public/* ../../.vercel_static/dashboard/ && echo ok > ../../.vercel_static/health.txt",
   "outputDirectory": ".vercel_static",
   "functions": {
     "api/**": {
@@ -11,6 +11,8 @@
     }
   },
   "rewrites": [
+    { "source": "/dashboard", "destination": "/dashboard/index.html" },
+    { "source": "/dashboard/(.*)", "destination": "/dashboard/$1" },
     { "source": "/(.*)", "destination": "/api" }
   ]
 }
