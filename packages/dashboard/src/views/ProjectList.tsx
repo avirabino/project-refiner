@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ProjectItem } from '../types';
-import { createProject, updateProject, deleteProject } from '../api';
+import { createProject, updateProject, deleteProject, detectProjectInfo } from '../api';
 
 interface ProjectListProps {
   projects: ProjectItem[];
@@ -40,6 +40,7 @@ export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsu
   const [newSprint, setNewSprint] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [creating, setCreating] = useState(false);
+  const [detecting, setDetecting] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState('');
@@ -57,6 +58,25 @@ export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsu
     setNewUrl('');
     setShowCreate(false);
     setError(null);
+  };
+
+  const handleAutoDetect = async () => {
+    const path = newUrl.trim();
+    if (!path) {
+      setError('Enter a project URL / path first, then click Auto Detect');
+      return;
+    }
+    setDetecting(true);
+    setError(null);
+    try {
+      const info = await detectProjectInfo(path);
+      if (info.sprint) setNewSprint(info.sprint);
+      if (info.description) setNewDesc(info.description);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDetecting(false);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -194,6 +214,37 @@ export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsu
               />
             </div>
           </div>
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-slate-500 mb-1">URL / Path</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+                placeholder="e.g. C:\Projects\my-app  or  https://github.com/..."
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={detecting || !newUrl.trim()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-40 border border-indigo-200 rounded-lg transition-colors whitespace-nowrap"
+                onClick={handleAutoDetect}
+                title="Read CLAUDE.md / README.md to auto-fill sprint &amp; description"
+              >
+                {detecting ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )}
+                {detecting ? 'Detecting...' : 'Auto Detect'}
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Current Sprint</label>
@@ -206,25 +257,15 @@ export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsu
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">URL</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Description</label>
               <input
                 type="text"
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
-                placeholder="e.g. https://github.com/..."
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
+                placeholder="What is this project about?"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
-          </div>
-          <div className="mb-3">
-            <label className="block text-xs font-medium text-slate-500 mb-1">Description</label>
-            <textarea
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-none"
-              rows={2}
-              placeholder="What is this project about?"
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-            />
           </div>
           <div className="flex justify-end gap-2">
             <button

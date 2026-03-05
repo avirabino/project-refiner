@@ -41,6 +41,19 @@ export async function deleteProject(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete project: ${res.status}`);
 }
 
+export async function detectProjectInfo(path: string): Promise<{ sprint: string | null; description: string | null; source: string }> {
+  const res = await fetch(`${BASE}/projects/detect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(err.error || `Failed to detect project info: ${res.status}`);
+  }
+  return res.json();
+}
+
 // ── Bugs ──────────────────────────────────────────────────────────────────────
 
 export async function fetchBugs(sprint?: string, status?: string): Promise<BugItem[]> {

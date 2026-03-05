@@ -1,7 +1,111 @@
 import { Router } from 'express';
+import { readFile } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
 import { getStorage } from '../storage/index.js';
 
 export const projectsRouter = Router();
+
+// ── Auto-detect sprint + description from CLAUDE.md / README.md ──────────────
+
+/**
+ * POST /api/projects/detect
+ * Reads CLAUDE.md (preferred) or README.md from a local project path and
+ * extracts the current sprint number and a one-line description/gist.
+ *
+ * Body: { path: string }   — absolute path to the project root
+ * Returns: { sprint, description, source }
+ *
+ * Only available in local dev mode (filesystem access required).
+ */
+projectsRouter.post('/detect', async (req, res) => {
+  const { path: projectPath } = req.body as { path?: string };
+  if (!projectPath) {
+    res.status(400).json({ error: 'path is required' });
+    return;
+  }
+
+  // Serverless (Vercel) has no filesystem access to user machines
+  if (process.env.VERCEL) {
+    res.status(400).json({ error: 'Auto-detect requires local dev server (npm run dev:server)' });
+    return;
+  }
+
+  try {
+    const absPath = resolve(projectPath);
+
+    // Try CLAUDE.md first, then README.md
+    let content: string | null = null;
+    let source = '';
+    for (const candidate of ['CLAUDE.md', 'README.md']) {
+      try {
+        content = await readFile(join(absPath, candidate), 'utf8');
+        source = candidate;
+        break;
+      } catch {
+        // next candidate
+      }
+    }
+
+    if (!content) {
+      res.status(404).json({ error: 'No CLAUDE.md or README.md found at the given path' });
+      return;
+    }
+
+    // ── Parse sprint ──────────────────────────────────────────────────────────
+    let sprint: string | null = null;
+
+    // Pattern: | **Current sprint** | sprint_07 |  (CLAUDE.md table)
+    const tableSprintMatch = content.match(/\*\*Current sprint\*\*\s*\|\s*sprint[_\s]*(\d+)/i);
+    if (tableSprintMatch) sprint = tableSprintMatch[1];
+
+    // Pattern: Current sprint: 07   or   sprint: 07
+    if (!sprint) {
+      const labelMatch = content.match(/(?:current\s+)?sprint[:\s]+(\d+)/i);
+      if (labelMatch) sprint = labelMatch[1];
+    }
+
+    // Pattern: (Sprint 10)
+    if (!sprint) {
+      const parenMatch = content.match(/\(Sprint\s+(\d+)\)/i);
+      if (parenMatch) sprint = parenMatch[1];
+    }
+
+    // ── Parse description ─────────────────────────────────────────────────────
+    let description: string | null = null;
+
+    // Pattern: | **Purpose** | Some description here |  (CLAUDE.md table)
+    const purposeMatch = content.match(/\*\*Purpose\*\*\s*\|\s*(.+?)\s*\|/);
+    if (purposeMatch) description = purposeMatch[1].trim();
+
+    // Fallback: first non-meta paragraph in the first 30 lines
+    if (!description) {
+      const lines = content.split('\n');
+      for (let i = 0; i < Math.min(lines.length, 30); i++) {
+        const line = lines[i].trim();
+        if (
+          !line ||
+          line.startsWith('#') ||
+          line.startsWith('---') ||
+          line.startsWith('>') ||
+          line.startsWith('|') ||
+          line.startsWith('```') ||
+          line.startsWith('- ') ||
+          line.startsWith('* ')
+        ) continue;
+        description = line.slice(0, 200);
+        break;
+      }
+    }
+
+    // Normalise sprint: strip leading zeros but keep "0"
+    const normSprint = sprint ? (sprint.replace(/^0+/, '') || '0') : null;
+
+    res.json({ sprint: normSprint, description, source });
+  } catch (err) {
+    console.error('[vigil-server] Error detecting project info:', err);
+    res.status(500).json({ error: 'Failed to read project files' });
+  }
+});
 
 // GET /api/projects — list all projects
 projectsRouter.get('/', async (_req, res) => {
