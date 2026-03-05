@@ -24,7 +24,10 @@ export {
   VIGILSnapshotSchema,
   VIGILSessionSchema,
   BugUpdateSchema,
+  AnnotationKindSchema,
+  AnnotationSchema,
   TEST_STATUS,
+  normalizeSprint,
 } from '@synaptix/vigil-shared';
 
 export type {
@@ -38,6 +41,7 @@ export type {
   BugFile,
   FeatureFile,
   HealthStatus,
+  Annotation,
 } from '@synaptix/vigil-shared';
 
 // ── Extension-only types ─────────────────────────────────────────────────────
@@ -82,6 +86,13 @@ export enum MessageType {
   GET_PROJECT_SPRINTS = 'GET_PROJECT_SPRINTS',
   // Sprint 07 — Session resync (FAT data recovery)
   RESYNC_SESSION = 'RESYNC_SESSION',
+  // Sprint 07 — Delete session from both IndexedDB + server (single source of truth)
+  DELETE_SESSION = 'DELETE_SESSION',
+  // Sprint 07 — Annotation overlay (visual markup)
+  LOG_ANNOTATION = 'LOG_ANNOTATION',
+  UPDATE_ANNOTATION = 'UPDATE_ANNOTATION',
+  DELETE_ANNOTATION = 'DELETE_ANNOTATION',
+  CLEAR_ANNOTATIONS = 'CLEAR_ANNOTATIONS',
 }
 
 /**
@@ -109,6 +120,7 @@ export interface Session {
   description: string;
   status: SessionStatus;
   project?: string;
+  sprint?: string;
   outputPath?: string;
   tags: string[];
   startedAt: number;

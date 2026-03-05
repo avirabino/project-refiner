@@ -61,10 +61,22 @@ CREATE TABLE IF NOT EXISTS sessions (
   snapshots JSONB DEFAULT '[]'::jsonb,
   bugs JSONB DEFAULT '[]'::jsonb,
   features JSONB DEFAULT '[]'::jsonb,
+  annotations JSONB DEFAULT '[]'::jsonb,
   sprint TEXT,
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Sprint 07: Add annotations column if missing (migration for existing DBs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'sessions' AND column_name = 'annotations'
+  ) THEN
+    ALTER TABLE sessions ADD COLUMN annotations JSONB DEFAULT '[]'::jsonb;
+  END IF;
+END $$;
 
 -- Updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at()

@@ -19,6 +19,7 @@ export const SHORTCUT_MAP = {
   V: 'toggle-recording',
   S: 'capture-screenshot',
   G: 'open-bug-editor',
+  A: 'toggle-annotations',
 } as const;
 
 /**

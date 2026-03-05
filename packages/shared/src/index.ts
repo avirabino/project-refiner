@@ -17,11 +17,18 @@ export {
   VIGILSnapshotSchema,
   VIGILSessionSchema,
 
+  // Annotation schemas (Sprint 07 — visual markup)
+  AnnotationKindSchema,
+  AnnotationSchema,
+
   // Mutation schemas + types
   BugUpdateSchema,
 
   // Constants
   TEST_STATUS,
+
+  // Utilities
+  normalizeSprint,
 } from './schemas.js';
 
 export type {
@@ -35,4 +42,6 @@ export type {
   BugFile,
   FeatureFile,
   HealthStatus,
+  Annotation,
+  AnnotationKind,
 } from './schemas.js';

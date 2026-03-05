@@ -6,8 +6,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { MessageType, SessionStatus } from '@shared/types';
-import type { Session, Bug, Feature, InspectedElement } from '@shared/types';
-import { getSession, deleteSession, getBugsBySession } from '@core/db';
+import type { Session, Bug, Feature, InspectedElement, Annotation } from '@shared/types';
+import { getSession, getBugsBySession } from '@core/db';
 import { formatDuration } from '@shared/utils';
 
 interface SessionDetailProps {
@@ -38,6 +38,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [inspectedElements, setInspectedElements] = useState<InspectedElement[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,18 +50,20 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      const { getFeaturesBySession, getInspectedElementsBySession } = await import('@core/db');
-      const [s, b, f, insp] = await Promise.all([
+      const { getFeaturesBySession, getInspectedElementsBySession, getAnnotationsBySession } = await import('@core/db');
+      const [s, b, f, insp, ann] = await Promise.all([
         getSession(sessionId),
         getBugsBySession(sessionId),
         getFeaturesBySession(sessionId),
         getInspectedElementsBySession(sessionId),
+        getAnnotationsBySession(sessionId),
       ]);
       if (!cancelled) {
         setSession(s ?? null);
         setBugs(b);
         setFeatures(f);
         setInspectedElements(insp);
+        setAnnotations(ann);
         setLoading(false);
       }
     };
@@ -92,7 +95,24 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
 
   const handleDelete = async () => {
     setDeleting(true);
-    await deleteSession(sessionId);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          { type: MessageType.DELETE_SESSION, payload: { sessionId }, source: 'popup' },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (!response?.ok) {
+              reject(new Error(response?.error || 'Delete failed'));
+            } else {
+              resolve();
+            }
+          }
+        );
+      });
+    } catch (err) {
+      console.warn('[Vigil] Delete failed:', err);
+    }
     onBack();
   };
 
@@ -268,11 +288,17 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="grid grid-cols-4 gap-2 text-xs">
           <div className="rounded-lg bg-gray-800/60 p-2 text-center">
             <p className="text-gray-400">Bugs</p>
             <p data-testid="session-bug-count" className="text-white font-bold text-base mt-0.5">
               {session.bugCount}
+            </p>
+          </div>
+          <div className="rounded-lg bg-gray-800/60 p-2 text-center">
+            <p className="text-gray-400">Annotations</p>
+            <p data-testid="session-annotation-count" className="text-white font-bold text-base mt-0.5">
+              {annotations.length}
             </p>
           </div>
           <div className="rounded-lg bg-gray-800/60 p-2 text-center">

@@ -56,7 +56,7 @@ ${description ? `\n## Description\n${description}` : ''}`;
   return { id, title, status, priority, sprint, description, raw };
 }
 
-const SESSION_SELECT_COLS = 'id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, sprint, description';
+const SESSION_SELECT_COLS = 'id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, annotations, sprint, description';
 
 function rowToSession(row: Record<string, unknown>): VIGILSession | null {
   const obj = {
@@ -72,6 +72,7 @@ function rowToSession(row: Record<string, unknown>): VIGILSession | null {
     snapshots: typeof row.snapshots === 'string' ? JSON.parse(row.snapshots) : row.snapshots,
     bugs: typeof row.bugs === 'string' ? JSON.parse(row.bugs) : row.bugs,
     features: typeof row.features === 'string' ? JSON.parse(row.features) : row.features,
+    annotations: row.annotations ? (typeof row.annotations === 'string' ? JSON.parse(row.annotations) : row.annotations) : [],
   };
   const parsed = VIGILSessionSchema.safeParse(obj);
   return parsed.success ? parsed.data : null;
@@ -236,15 +237,16 @@ export class NeonStorage implements StorageProvider {
     const pool = getPool();
 
     await pool.query(
-      `INSERT INTO sessions (id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, sprint, description)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO sessions (id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, annotations, sprint, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (id) DO UPDATE SET
          ended_at = EXCLUDED.ended_at,
          clock = EXCLUDED.clock,
          recordings = EXCLUDED.recordings,
          snapshots = EXCLUDED.snapshots,
          bugs = EXCLUDED.bugs,
-         features = EXCLUDED.features`,
+         features = EXCLUDED.features,
+         annotations = EXCLUDED.annotations`,
       [
         session.id,
         session.name,
@@ -256,6 +258,7 @@ export class NeonStorage implements StorageProvider {
         JSON.stringify(session.snapshots),
         JSON.stringify(session.bugs),
         JSON.stringify(session.features),
+        JSON.stringify(session.annotations ?? []),
         session.sprint ?? null,
         session.description ?? null,
       ],

@@ -4,17 +4,17 @@
  * Project-oriented: required project field, auto-sprint detection, auto-generated name.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MessageType } from '@shared/types';
 import type { Session } from '@shared/types';
 import { generateSessionName } from '@shared/utils';
+import {
+  isDirectoryPickerAvailable,
+  pickProjectDirectory,
+  type SprintEntry,
+} from '@shared/directory-handle';
 import '@popup/popup.css';
-
-interface SprintEntry {
-  id: string;
-  name: string;
-}
 
 interface SessionHistory {
   lastProject: string;
@@ -41,6 +41,12 @@ const NewSessionTab: React.FC = () => {
   const [sprints, setSprints] = useState<SprintEntry[]>([]);
   const [sprintsLoading, setSprintsLoading] = useState(false);
   const [projectExists, setProjectExists] = useState<boolean | null>(null);
+
+  // Browse state (File System Access API)
+  const canBrowse = isDirectoryPickerAvailable();
+  const projectHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const [rootMarkers, setRootMarkers] = useState<string[]>([]);
+  const [browsed, setBrowsed] = useState(false);
 
   // History
   const [history, setHistory] = useState<SessionHistory>({ lastProject: '', lastSprint: '', recentProjects: [] });
@@ -114,14 +120,48 @@ const NewSessionTab: React.FC = () => {
     }
   }, [sprint]);
 
+  // Skip server-side sprint fetch when project was selected via Browse (client-side detection)
   useEffect(() => {
+    if (browsed) return; // sprints already detected client-side
     const timer = setTimeout(() => fetchSprints(project), 500);
     return () => clearTimeout(timer);
-  }, [project, fetchSprints]);
+  }, [project, fetchSprints, browsed]);
 
   const handleNameChange = (val: string) => {
     setName(val);
     setNameEdited(true);
+  };
+
+  // File System Access API — Browse for project folder
+  const handleBrowse = async () => {
+    try {
+      const result = await pickProjectDirectory();
+      projectHandleRef.current = result.handle;
+      setProject(result.name);
+      setBrowsed(true);
+      setRootMarkers(result.rootMarkers);
+      setProjectExists(true);
+
+      // Use client-side sprint detection instead of server roundtrip
+      if (result.sprints.length > 0) {
+        setSprints(result.sprints);
+        // Auto-select the latest sprint
+        const latest = result.sprints[result.sprints.length - 1];
+        if (!sprint) setSprint(latest.id);
+      } else {
+        setSprints([]);
+      }
+
+      // Persist handle for future sessions
+      import('@core/db').then(({ storeProjectHandle }) => {
+        storeProjectHandle(result.name, result.handle);
+      });
+    } catch (e) {
+      // User cancelled the picker (AbortError) — silently ignore
+      if ((e as DOMException)?.name !== 'AbortError') {
+        console.warn('[Vigil] Browse failed:', e);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,6 +174,9 @@ const NewSessionTab: React.FC = () => {
     const sessionName = name.trim() || generateSessionName(project.trim(), sessionSequence);
     const projectKey = project.trim();
     const sprintKey = sprint.trim() || undefined;
+
+    // Note: .vigil/ directory creation removed — too invasive for first-time projects.
+    // Will be opt-in via explicit user action in a future sprint.
 
     // Save history
     const updatedHistory: SessionHistory = {
@@ -228,21 +271,47 @@ const NewSessionTab: React.FC = () => {
             <label className="block text-xs font-semibold text-gray-400 mb-1">
               Project <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              list="projects-list"
-              data-testid="input-project-name"
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="e.g. C:\Synaptix-Labs\projects\vigil"
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              autoFocus
-              required
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                list="projects-list"
+                data-testid="input-project-name"
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                placeholder={canBrowse ? 'Browse or type project name' : 'e.g. TaskPilot'}
+                value={project}
+                onChange={(e) => { setProject(e.target.value); setBrowsed(false); projectHandleRef.current = null; setRootMarkers([]); }}
+                autoFocus
+                required
+              />
+              {canBrowse && (
+                <button
+                  type="button"
+                  onClick={handleBrowse}
+                  data-testid="btn-browse-project"
+                  className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-sm text-gray-300 font-medium transition-colors whitespace-nowrap"
+                  title="Open folder picker"
+                >
+                  Browse
+                </button>
+              )}
+            </div>
             <datalist id="projects-list">
               {history.recentProjects.map(p => <option key={p} value={p} />)}
             </datalist>
-            {project.trim() && projectExists === false && (
+            {/* Root marker indicators (shown after Browse) */}
+            {browsed && rootMarkers.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {rootMarkers.map(m => (
+                  <span key={m} className="inline-flex items-center gap-1 text-[10px] text-green-400 bg-green-900/20 border border-green-800/40 rounded px-1.5 py-0.5">
+                    {'\u2713'} {m}
+                  </span>
+                ))}
+              </div>
+            )}
+            {browsed && rootMarkers.length === 0 && (
+              <p className="mt-1 text-[10px] text-yellow-500">No project root markers found (.git, package.json) — verify correct folder</p>
+            )}
+            {!browsed && project.trim() && projectExists === false && (
               <p className="mt-1 text-[10px] text-yellow-500">Folder not found — sprint auto-detect unavailable</p>
             )}
           </div>
@@ -262,7 +331,7 @@ const NewSessionTab: React.FC = () => {
               >
                 <option value="">— Select sprint —</option>
                 {sprints.map(s => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
+                  <option key={s.name} value={s.id}>{s.name}</option>
                 ))}
               </select>
             ) : (

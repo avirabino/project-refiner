@@ -46,7 +46,7 @@ sprintsRouter.get('/project', async (req, res) => {
       .map((e) => ({ id: e.name.replace('sprint_', ''), name: e.name }))
       .sort((a, b) => a.id.localeCompare(b.id));
 
-    const current = sprints.length > 0 ? sprints[sprints.length - 1].name : null;
+    const current = sprints.length > 0 ? sprints[sprints.length - 1].id : null;
 
     res.json({ exists: true, sprints, current });
   } catch (err) {

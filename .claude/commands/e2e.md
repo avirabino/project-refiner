@@ -87,6 +87,15 @@ Regressions: 0 ← must always be 0
 ✅ PASS — safe to proceed | ❌ BLOCKED — regressions must be fixed first
 ```
 
+## E2E Testing Protocols (non-negotiable)
+
+See `docs/04_TESTING.md` § "Cross-Project E2E Protocols". Key rules:
+
+1. **Diagnostic-First** — For layout/CSS bugs, measure actual element dimensions before fixing. Use `browser_evaluate` or DevTools.
+2. **Multi-Viewport** — Layout E2E tests must verify at multiple viewport widths. One width is a false safety net.
+3. **No Fixed-Pixel Constraints** — Use `min()`/`max()` with percentages, not `max-width: Xpx` alone.
+4. **Interactive + Scripted** — Use MCP for diagnosis, Playwright scripts for regression.
+
 ## Rules
 
 - NEVER skip regression suite — it is the mandatory first gate

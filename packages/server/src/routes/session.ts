@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { VIGILSessionSchema } from '@synaptix/vigil-shared';
+import { VIGILSessionSchema, normalizeSprint } from '@synaptix/vigil-shared';
 import { loadConfig } from '../config.js';
 import { getStorage } from '../storage/index.js';
 
@@ -18,7 +18,9 @@ sessionRouter.post('/', async (req, res) => {
 
   const session = result.data;
   const config = loadConfig();
-  const sprint = config.sprintCurrent;
+  // Use session's own sprint (from extension) — fall back to server config only if absent
+  // Normalize to bare number format (e.g. "sprint_10" → "10") for consistency
+  const sprint = normalizeSprint(session.sprint ?? config.sprintCurrent);
   const storage = getStorage();
 
   try {

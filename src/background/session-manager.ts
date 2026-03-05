@@ -7,7 +7,7 @@
  * Legacy sessionManager preserved for backward compat with existing E2E tests.
  */
 
-import { SessionStatus, type Session, type VIGILSession, type VIGILRecording, type VIGILSnapshot, type Bug, type Feature } from '@shared/types';
+import { SessionStatus, type Session, type VIGILSession, type VIGILRecording, type VIGILSnapshot, type Bug, type Feature, type Annotation } from '@shared/types';
 import { generateSessionId, generateVigilSessionId, generateRecordingId } from '@shared/utils';
 import {
   createSession,
@@ -126,6 +126,7 @@ export const sessionManager = {
     recordMouseMove = false,
     tags: string[] = [],
     project?: string,
+    sprint?: string,
     outputPath?: string
   ): Promise<Session> {
     if (state.sessionId) {
@@ -148,6 +149,7 @@ export const sessionManager = {
       pages: isUserUrl(url) ? [url] : [],
       tags,
       project,
+      sprint,
       outputPath,
       actionCount: 0,
       bugCount: 0,
@@ -445,6 +447,7 @@ export const vigilSessionManager = {
       snapshots: [],
       bugs: [],
       features: [],
+      annotations: [],
     };
 
     vigilState.session = session;
@@ -521,6 +524,12 @@ export const vigilSessionManager = {
   addFeature(feature: Feature): void {
     if (!vigilState.session) return;
     vigilState.session.features.push(feature);
+    persistState();
+  },
+
+  addAnnotation(annotation: Annotation): void {
+    if (!vigilState.session) return;
+    vigilState.session.annotations.push(annotation);
     persistState();
   },
 

@@ -5,7 +5,19 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import type { Session, Bug, Feature, RecordingChunk, Screenshot, Action, InspectedElement } from '@shared/types';
+import type { Session, Bug, Feature, RecordingChunk, Screenshot, Action, InspectedElement, Annotation } from '@shared/types';
+
+/** Persisted project directory handle for File System Access API re-use across browser sessions. */
+export interface ProjectHandle {
+  /** Project name (folder name, e.g. "vigil") — primary key */
+  name: string;
+  /** The FileSystemDirectoryHandle (stored via structured clone in IndexedDB) */
+  handle: FileSystemDirectoryHandle;
+  /** When this handle was first stored */
+  storedAt: number;
+  /** When this handle was last used */
+  lastUsedAt: number;
+}
 import { DB_NAME } from '@shared/constants';
 
 class RefineDatabase extends Dexie {
@@ -16,6 +28,8 @@ class RefineDatabase extends Dexie {
   screenshots!: Table<Screenshot, string>;
   actions!: Table<Action, string>;
   inspectedElements!: Table<InspectedElement, string>;
+  annotations!: Table<Annotation, string>;
+  projectHandles!: Table<ProjectHandle, string>;
 
   constructor() {
     super(DB_NAME);
@@ -27,6 +41,16 @@ class RefineDatabase extends Dexie {
       screenshots:       '&id, sessionId, timestamp',
       actions:           '&id, sessionId, timestamp',
       inspectedElements: '&id, sessionId, timestamp',   // R023
+    });
+
+    // Sprint 07 — Annotation overlay (visual markup)
+    this.version(2).stores({
+      annotations:       '&id, sessionId, timestamp',
+    });
+
+    // Sprint 07 — Project handle persistence (File System Access API)
+    this.version(3).stores({
+      projectHandles:    '&name',
     });
   }
 }
@@ -53,13 +77,14 @@ export async function updateSession(id: string, changes: Partial<Session>): Prom
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  await db.transaction('rw', [db.sessions, db.bugs, db.features, db.screenshots, db.recordings, db.actions], async () => {
+  await db.transaction('rw', [db.sessions, db.bugs, db.features, db.screenshots, db.recordings, db.actions, db.annotations], async () => {
     await db.sessions.delete(id);
     await db.bugs.where('sessionId').equals(id).delete();
     await db.features.where('sessionId').equals(id).delete();
     await db.screenshots.where('sessionId').equals(id).delete();
     await db.recordings.where('sessionId').equals(id).delete();
     await db.actions.where('sessionId').equals(id).delete();
+    await db.annotations.where('sessionId').equals(id).delete();
   });
 }
 
@@ -184,4 +209,53 @@ export async function addInspectedElement(el: InspectedElement): Promise<string>
 
 export async function getInspectedElementsBySession(sessionId: string): Promise<InspectedElement[]> {
   return db.inspectedElements.where('sessionId').equals(sessionId).sortBy('timestamp');
+}
+
+// ── Annotations (Sprint 07 — visual markup) ──────────────────────────────────
+
+export async function addAnnotation(annotation: Annotation): Promise<string> {
+  await db.annotations.add(annotation);
+  return annotation.id;
+}
+
+export async function getAnnotationsBySession(sessionId: string): Promise<Annotation[]> {
+  return db.annotations.where('sessionId').equals(sessionId).sortBy('timestamp');
+}
+
+export async function updateAnnotation(id: string, patch: Partial<Annotation>): Promise<void> {
+  await db.annotations.update(id, { ...patch, updatedAt: Date.now() });
+}
+
+export async function deleteAnnotation(id: string): Promise<void> {
+  await db.annotations.delete(id);
+}
+
+export async function deleteAnnotationsBySession(sessionId: string): Promise<void> {
+  await db.annotations.where('sessionId').equals(sessionId).delete();
+}
+
+// ── Project handles (Sprint 07 — File System Access API persistence) ────────
+
+/**
+ * Store (or update) a project directory handle for later re-use.
+ * Uses `put` so re-selecting the same project overwrites the previous handle.
+ */
+export async function storeProjectHandle(name: string, handle: FileSystemDirectoryHandle): Promise<void> {
+  const now = Date.now();
+  await db.projectHandles.put({ name, handle, storedAt: now, lastUsedAt: now });
+}
+
+/** Retrieve a previously stored project handle by name. */
+export async function getProjectHandle(name: string): Promise<ProjectHandle | undefined> {
+  return db.projectHandles.get(name);
+}
+
+/** List all stored project handles, most recently used first. */
+export async function listProjectHandles(): Promise<ProjectHandle[]> {
+  return db.projectHandles.orderBy('name').toArray();
+}
+
+/** Update `lastUsedAt` timestamp for a project handle. */
+export async function touchProjectHandle(name: string): Promise<void> {
+  await db.projectHandles.update(name, { lastUsedAt: Date.now() });
 }

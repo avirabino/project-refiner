@@ -237,6 +237,22 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
             {project.trim() && projectExists === true && sprints.length === 0 && (
               <p className="mt-1 text-[10px] text-gray-500">No docs/sprints/ folder found — enter sprint manually</p>
             )}
+            <button
+              type="button"
+              className="mt-1 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+              onClick={() => {
+                // Save origin tab info so the standalone tab knows which tab to record
+                const info: Record<string, unknown> = {};
+                if (activeTabId) info.refineOriginTabId = activeTabId;
+                if (activeTabUrl) info.refineOriginTabUrl = activeTabUrl;
+                chrome.storage.local.set(info, () => {
+                  chrome.tabs.create({ url: chrome.runtime.getURL('src/new-session/new-session.html') });
+                  window.close();
+                });
+              }}
+            >
+              Open in tab for folder picker &rarr;
+            </button>
           </div>
 
           {/* 2. Sprint (auto-detected or manual) */}
@@ -254,7 +270,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
               >
                 <option value="">— Select sprint —</option>
                 {sprints.map(s => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
+                  <option key={s.name} value={s.id}>{s.name}</option>
                 ))}
               </select>
             ) : (

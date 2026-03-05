@@ -6,7 +6,7 @@
 
 import { MessageType } from '@shared/types';
 import type { ChromeMessage, ChromeResponse } from '@shared/messages';
-import type { Bug, Feature, RecordingChunk, InspectedElement } from '@shared/types';
+import type { Bug, Feature, RecordingChunk, InspectedElement, Annotation } from '@shared/types';
 import { sessionManager, vigilSessionManager, loadServerUrl } from './session-manager';
 import { startKeepAlive } from './keep-alive';
 import { captureScreenshot } from './screenshot';
@@ -26,6 +26,12 @@ import {
   getFeaturesBySession,
   getScreenshotsBySession,
   getRecordingChunks,
+  deleteSession as deleteSessionFromDb,
+  addAnnotation as addAnnotationToDb,
+  getAnnotationsBySession,
+  updateAnnotation as updateAnnotationInDb,
+  deleteAnnotation as deleteAnnotationFromDb,
+  deleteAnnotationsBySession,
 } from '@core/db';
 import type { VIGILSession, VIGILRecording, VIGILSnapshot } from '@shared/types';
 
@@ -57,7 +63,7 @@ export function handleMessage(
         chrome.storage.local.get(['refineOutputPath'], (res) => {
           const outputPath = res.refineOutputPath as string | undefined;
           sessionManager
-            .createSession(name, description ?? '', url, finalTabId, recordMouseMove ?? false, tags ?? [], project, outputPath)
+            .createSession(name, description ?? '', url, finalTabId, recordMouseMove ?? false, tags ?? [], project, sprint, outputPath)
             .then(async (session) => {
               // Sprint 06 BUG-FAT-011: Create vigil session (idle — no auto-recording).
               // S07-16: Pass sprint + description for project-oriented sessions.
@@ -372,7 +378,7 @@ export function handleMessage(
             id: session.id,
             name: session.name,
             projectId: session.project ?? '',
-            sprint: undefined,
+            sprint: session.sprint,
             description: session.description,
             startedAt: session.startedAt,
             endedAt: session.stoppedAt,
@@ -381,6 +387,7 @@ export function handleMessage(
             snapshots,
             bugs,
             features,
+            annotations: [],
           };
 
           // POST to server
@@ -405,6 +412,99 @@ export function handleMessage(
           sendResponse({ ok: false, error: (e as Error).message });
         }
       })();
+      return true;
+    }
+
+    // Sprint 07 FAT: Delete session from IndexedDB + Neon (single source of truth)
+    case MessageType.DELETE_SESSION: {
+      const { sessionId } = message.payload as { sessionId: string };
+      if (!sessionId) {
+        sendResponse({ ok: false, error: 'Missing sessionId' });
+        return false;
+      }
+
+      (async () => {
+        try {
+          // 1. Delete from local IndexedDB first (always succeeds)
+          await deleteSessionFromDb(sessionId);
+          console.log(`[Vigil] Session ${sessionId} deleted from IndexedDB`);
+
+          // 2. Also delete from server (Neon) — non-blocking; log warning on failure
+          try {
+            const serverUrl = await loadServerUrl();
+            const res = await fetch(`${serverUrl}/api/sessions/${encodeURIComponent(sessionId)}`, {
+              method: 'DELETE',
+              signal: AbortSignal.timeout(5000),
+            });
+            if (res.ok) {
+              console.log(`[Vigil] Session ${sessionId} deleted from server`);
+            } else {
+              console.warn(`[Vigil] Server delete returned ${res.status} for session ${sessionId}`);
+            }
+          } catch (e) {
+            console.warn(`[Vigil] Server delete failed for session ${sessionId}:`, (e as Error).message);
+          }
+
+          sendResponse({ ok: true });
+        } catch (e) {
+          console.error('[Vigil] Delete session error:', e);
+          sendResponse({ ok: false, error: (e as Error).message });
+        }
+      })();
+      return true;
+    }
+
+    // Sprint 07: Annotation CRUD (visual markup overlay)
+    case MessageType.LOG_ANNOTATION: {
+      const { action: annotationAction, annotation, sessionId } = message.payload as {
+        action: 'add' | 'list';
+        annotation?: Annotation;
+        sessionId?: string;
+      };
+
+      if (annotationAction === 'list' && sessionId) {
+        getAnnotationsBySession(sessionId)
+          .then((annotations) => sendResponse({ ok: true, data: { annotations } }))
+          .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
+        return true;
+      }
+
+      if (annotationAction === 'add' && annotation) {
+        // Store in IndexedDB + add to vigil session (for POST payload)
+        if (vigilSessionManager.hasActiveSession()) {
+          vigilSessionManager.addAnnotation(annotation);
+        }
+        addAnnotationToDb(annotation)
+          .then(() => sendResponse({ ok: true, data: { id: annotation.id } }))
+          .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
+        return true;
+      }
+
+      sendResponse({ ok: false, error: 'Invalid LOG_ANNOTATION payload' });
+      return false;
+    }
+
+    case MessageType.UPDATE_ANNOTATION: {
+      const { id, patch } = message.payload as { id: string; patch: Partial<Annotation> };
+      updateAnnotationInDb(id, patch)
+        .then(() => sendResponse({ ok: true }))
+        .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
+      return true;
+    }
+
+    case MessageType.DELETE_ANNOTATION: {
+      const { id } = message.payload as { id: string };
+      deleteAnnotationFromDb(id)
+        .then(() => sendResponse({ ok: true }))
+        .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
+      return true;
+    }
+
+    case MessageType.CLEAR_ANNOTATIONS: {
+      const { sessionId } = message.payload as { sessionId: string };
+      deleteAnnotationsBySession(sessionId)
+        .then(() => sendResponse({ ok: true }))
+        .catch((err: Error) => sendResponse({ ok: false, error: err.message }));
       return true;
     }
 

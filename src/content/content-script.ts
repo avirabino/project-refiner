@@ -176,5 +176,7 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
     const btnPause = root.querySelector('[data-testid="btn-pause"]') as HTMLButtonElement | null;
     const btnResume = root.querySelector('[data-testid="btn-resume"]') as HTMLButtonElement | null;
     (btnPause ?? btnResume)?.click();
+  } else if (command === 'toggle-annotations') {
+    (root.querySelector('[data-testid="btn-annotations"]') as HTMLButtonElement | null)?.click();
   }
 }, { capture: true });

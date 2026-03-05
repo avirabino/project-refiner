@@ -668,4 +668,188 @@ await popupPage.getByTestId('btn-new-session').first().click();
 
 ---
 
-*Last updated: 2026-02-23 (v1.2.0 — Sprint 05 closure)*
+---
+
+## Cross-Project E2E Protocols (Lessons from Papyrus DR)
+
+> **Added:** Sprint 06. Based on the Papyrus Wide/Narrow Layout Bug DR (5 failed rounds, P1 severity).
+> **Applies to:** All SynaptixLabs projects using Playwright E2E tests.
+> **Source DR:** `C:\Synaptix-Labs\projects\Papyrus\docs\sprints\sprint_10\reports\sprint_10_DR_wide_narrow_layout_bug.md`
+
+### The Problem: E2E as False Safety Net
+
+A Papyrus layout bug (wide/narrow toggle had zero visual effect) passed all 12 E2E tests for **4 consecutive fix rounds** because Playwright ran at a 1280px viewport where the CSS math happened to work. On the user's actual ~850px editor canvas, every fix produced identical output for both modes.
+
+**Root cause:** `max-width: 780px` has zero effect when the parent container is already ≤780px. Every fix used some form of 780px as a constraint. The tests validated at ONE viewport width but the bug existed at all widths below ~876px.
+
+---
+
+### Protocol 1: Diagnostic-First for Layout Bugs
+
+**BEFORE writing any CSS/layout fix**, run this diagnostic sequence:
+
+```
+Step 1: Navigate to the page on the user's dev server
+        → Use Playwright MCP `browser_navigate` or open the URL directly
+
+Step 2: Measure actual element dimensions
+        → Use `browser_evaluate` or browser DevTools:
+           document.querySelector('.target-element').offsetWidth
+           document.querySelector('.target-element').getBoundingClientRect()
+           window.innerWidth
+           document.querySelector('.parent-container').offsetWidth
+
+Step 3: Compute the CSS math at the user's ACTUAL width
+        → Substitute measured values into any calc()/min()/max() expressions
+        → Verify the output differs between the two states
+
+Step 4: Take a screenshot for baseline comparison
+        → browser_screenshot or Playwright MCP screenshot
+
+Step 5: ONLY THEN write the fix
+```
+
+**The single most impactful diagnostic action — asking the user to run `el.offsetWidth` in DevTools — was never done in the first 4 rounds.** This single number would have immediately revealed why every fix failed.
+
+---
+
+### Protocol 2: Multi-Viewport E2E Matrix
+
+Layout E2E tests MUST assert at multiple viewport widths, not just the default 1280px.
+
+**Minimum viewport matrix for layout tests:**
+
+| Width | Represents |
+|-------|-----------|
+| 1024px | Small laptop / tablet landscape |
+| 1280px | Standard laptop (Playwright default) |
+| 1920px | Full HD desktop |
+
+**Implementation pattern:**
+
+```typescript
+const VIEWPORTS = [1024, 1280, 1920]
+
+for (const width of VIEWPORTS) {
+  test(`layout works at ${width}px`, async ({ adminPage }) => {
+    await adminPage.setViewportSize({ width, height: 720 })
+    // ... navigate, toggle, measure ...
+    const widthDifference = wideBox.width - narrowBox.width
+    expect(widthDifference).toBeGreaterThanOrEqual(50)
+  })
+}
+```
+
+**Core assertion for toggle/mode bugs:** Always assert `widthDifference >= N` (not just "wide > narrow" which can pass at 1px difference).
+
+---
+
+### Protocol 3: No Fixed-Pixel Layout Constraints
+
+**Rule:** Never use fixed-pixel values as the sole constraint for responsive layout features.
+
+| BAD | WHY | GOOD |
+|-----|-----|------|
+| `max-width: 780px` | No effect when parent ≤ 780px | `width: min(780px, 75%)` |
+| `calc(50% - 390px)` | Evaluates to ≤48px when parent ≤ 876px | `width: 75%` (always relative) |
+| `padding: max(48px, calc(50% - 390px))` | Math collapses at narrow viewports | Use `width` with `mx-auto` instead of padding |
+| `maxWidth: 780px; margin: auto` | Same — no constraint when parent ≤ value | `width: min(780px, 75%)` with `mx-auto` |
+
+**The winning formula from the DR:**
+```css
+/* Wide mode: fills parent minus margins */
+width: calc(100% - 96px);
+
+/* Narrow mode: always visibly narrower than wide */
+width: min(780px, 75%);
+```
+
+**Proof:** `0.75P < P - 96` when `P > 384px` (always true when `minWidth: 320px` is set).
+
+At ANY parent width:
+- 600px → Wide: 504px, Narrow: 450px (54px difference)
+- 850px → Wide: 754px, Narrow: 637px (117px difference)
+- 1280px → Wide: 1184px, Narrow: 780px (404px difference)
+
+---
+
+### Protocol 4: Scripted E2E vs Interactive MCP Diagnostics
+
+These are **two different tools** for two different purposes:
+
+| | Scripted E2E (Playwright) | Interactive MCP (`browser_*`) |
+|---|---|---|
+| **Purpose** | Repeatable regression suite | Ad-hoc diagnostic investigation |
+| **When** | CI pipeline, pre-merge gates | During bug investigation, before writing fix |
+| **Viewport** | Fixed (per config) | Match user's actual setup |
+| **What it catches** | Regressions from known-good state | Root cause of why something looks wrong |
+| **Limitation** | Only validates at configured viewports | Not automated, not in CI |
+
+**Key insight:** Scripted E2E validates "does the code still work?" but NOT "does this fix actually solve the user's reported problem?" For the latter, use interactive MCP diagnostics against the user's live dev server.
+
+#### Available Playwright MCP Tools
+
+When Claude Code has Playwright MCP configured, these tools are available for interactive diagnostics:
+
+| Tool | Use For |
+|------|---------|
+| `browser_navigate` | Open a URL on the user's dev server |
+| `browser_evaluate` | Run JS to measure element widths, positions, computed styles |
+| `browser_screenshot` | Capture visual state for comparison |
+| `browser_click` | Interact with toggles, buttons |
+| `browser_type` | Fill form fields |
+| `browser_console_messages` | Check for JS errors |
+
+**Example diagnostic session:**
+```
+1. browser_navigate → http://localhost:33847/admin/articles/new
+2. browser_click → "Editor" tab → "Docs" toggle
+3. browser_evaluate → document.querySelector('[data-layout-mode]').offsetWidth
+   → Returns 754 (wide mode)
+4. browser_click → wide/narrow toggle button
+5. browser_evaluate → document.querySelector('[data-layout-mode]').offsetWidth
+   → Returns 754 (SAME — bug confirmed, fix didn't work)
+6. browser_screenshot → save evidence
+```
+
+This sequence would have caught the Papyrus bug in Round 1 instead of Round 5.
+
+---
+
+### Protocol 5: Toolbar vs Canvas Separation Pattern
+
+When building editor UIs with layout modes (wide/narrow, focus, zen, etc.):
+
+```
+┌──────────────────────────────────────────────────┐
+│  Toolbar — ALWAYS full-width, flex-shrink-0      │  ← Chrome element
+├──────────────────────────────────────────────────┤
+│              ┌──────────────────┐                │
+│              │  Canvas (scroll) │ ← constraint   │  ← Content element
+│              │  Editor content  │    only here    │
+│              └──────────────────┘                │
+└──────────────────────────────────────────────────┘
+```
+
+**Rules:**
+1. Toolbar is a **chrome element** — always full-width, never constrained by layout mode
+2. Canvas is a **content element** — respects reading-width preferences
+3. Never put toolbar inside the layout constraint div (causes button overlap at narrow widths)
+4. This matches Google Docs, Notion, and other professional editors
+
+---
+
+### Checklist for Layout Bug Fixes
+
+Before declaring a layout fix complete:
+
+- [ ] Measured actual element width on the user's viewport (not just Playwright's 1280px)
+- [ ] CSS math verified at 3+ viewport widths (1024, 1280, 1920)
+- [ ] Used percentage-based or `min()`/`max()` constraints (no fixed-pixel-only)
+- [ ] E2E asserts `widthDifference >= 50px` (not just "A > B")
+- [ ] User confirmed visual change on their machine (screenshot or verbal confirmation)
+- [ ] No secondary regressions (toolbar overlap, scroll issues, button interception)
+
+---
+
+*Last updated: 2026-03-05 (v1.3.0 — Sprint 06 cross-project protocols)*

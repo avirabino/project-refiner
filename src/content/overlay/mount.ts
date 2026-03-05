@@ -2,12 +2,17 @@
  * @file mount.ts
  * @description Mounts the Refine React overlay inside an isolated Shadow DOM.
  * Creates #refine-root → shadow root → React tree. Tears down on unmount.
+ *
+ * Sprint 07: Also mounts the light DOM annotation canvas (SVG) and
+ * initializes annotation state for the session.
  */
 
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import ControlBar from './ControlBar';
 import overlayStyles from '../styles/overlay.css?inline';
+import { mountAnnotationCanvas, unmountAnnotationCanvas } from '../annotation-canvas';
+import { initAnnotationState, destroyAnnotationState } from '../annotation-state';
 
 let hostElement: HTMLDivElement | null = null;
 let reactRoot: Root | null = null;
@@ -44,10 +49,18 @@ export function mountOverlay(sessionId: string, options: OverlayOptions = {}): v
     })
   );
 
+  // Sprint 07: Mount annotation canvas (light DOM) + init state
+  mountAnnotationCanvas();
+  initAnnotationState(sessionId);
+
   console.log('[Refine] Overlay mounted for session:', sessionId);
 }
 
 export function unmountOverlay(): void {
+  // Sprint 07: Tear down annotations first
+  destroyAnnotationState();
+  unmountAnnotationCanvas();
+
   if (reactRoot) {
     reactRoot.unmount();
     reactRoot = null;

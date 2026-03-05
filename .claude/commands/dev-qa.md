@@ -47,6 +47,16 @@ npm run dev:server                                 # port 7474 (Phase 2)
 npm run dev:demo                                   # port 3900 (manual testing)
 ```
 
+## E2E Testing Protocols (non-negotiable)
+
+See `docs/04_TESTING.md` § "Cross-Project E2E Protocols" for full details. Summary:
+
+1. **Diagnostic-First** — For layout/CSS bugs, MEASURE element dimensions with `browser_evaluate` BEFORE writing a fix. Never guess at CSS math.
+2. **Multi-Viewport** — Layout tests must verify at multiple viewport widths. One width is a false safety net.
+3. **No Fixed-Pixel Constraints** — Use `min()`/`max()` with percentages for responsive features. `max-width: Xpx` fails silently when parent ≤ X.
+4. **Scripted vs Interactive** — Use MCP diagnostics for bug investigation, Playwright scripts for regression.
+5. **Minimum Pixel Difference** — For toggle assertions, assert `diff >= 50px`, not just `A > B`.
+
 ## Output discipline
 
 For every gate run:
@@ -54,7 +64,7 @@ For every gate run:
 2. Pass/fail per layer (unit / integration / E2E)
 3. List every failure with file + line + repro steps
 4. Screenshots for all E2E failures
-5. Update status in `sprint_06_team_dev_todo.md`
+5. Update status in sprint team TODO file
 
 ## Required data-testid attributes
 

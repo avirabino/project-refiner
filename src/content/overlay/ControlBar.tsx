@@ -8,7 +8,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageType } from '@shared/types';
 import { stopRecording } from '../recorder';
 import { safeSendMessage } from '../safe-message';
+import { getAnnotations, ANNOTATION_EVENTS } from '../annotation-state';
 import BugEditor from './BugEditor';
+import AnnotationToolbar from './AnnotationToolbar';
+import AnnotationCommentEditor from './AnnotationCommentEditor';
 
 interface ControlBarProps {
   sessionId: string;
@@ -43,6 +46,10 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
   const [bugEditorScreenshotDataUrl, setBugEditorScreenshotDataUrl] = useState<string | undefined>(undefined);
   const [noteInput, setNoteInput] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [showAnnotationTools, setShowAnnotationTools] = useState(false);
+  const [showCommentEditor, setShowCommentEditor] = useState(false);
+  const [hasUnseenAnnotations, setHasUnseenAnnotations] = useState(false);
+  const lastSeenAnnotationCountRef = useRef(0);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +115,34 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
     window.addEventListener('vigil:open-bug-editor', handler);
     return () => window.removeEventListener('vigil:open-bug-editor', handler);
   }, []);
+
+  // Sprint 07: Listen for annotation comment tool activation
+  useEffect(() => {
+    const handler = () => setShowCommentEditor(true);
+    document.addEventListener('vigil:annotation-comment-request', handler);
+    return () => document.removeEventListener('vigil:annotation-comment-request', handler);
+  }, []);
+
+  // Sprint 07: "What's New" badge — track unseen annotations
+  useEffect(() => {
+    const handleAnnotationsUpdated = () => {
+      const count = getAnnotations().length;
+      if (!showAnnotationTools && count > lastSeenAnnotationCountRef.current) {
+        setHasUnseenAnnotations(true);
+      }
+      lastSeenAnnotationCountRef.current = count;
+    };
+    document.addEventListener(ANNOTATION_EVENTS.UPDATED, handleAnnotationsUpdated);
+    return () => document.removeEventListener(ANNOTATION_EVENTS.UPDATED, handleAnnotationsUpdated);
+  }, [showAnnotationTools]);
+
+  // Clear badge when toolbar is opened
+  useEffect(() => {
+    if (showAnnotationTools) {
+      setHasUnseenAnnotations(false);
+      lastSeenAnnotationCountRef.current = getAnnotations().length;
+    }
+  }, [showAnnotationTools]);
 
   // BUG-FAT-002: Sync recording state when SPACE toggle fires from content-script
   useEffect(() => {
@@ -273,6 +308,18 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
         />
       )}
 
+      {showCommentEditor && (
+        <AnnotationCommentEditor
+          sessionId={sessionId}
+          onClose={() => setShowCommentEditor(false)}
+        />
+      )}
+
+      <AnnotationToolbar
+        visible={showAnnotationTools}
+        onClose={() => setShowAnnotationTools(false)}
+      />
+
       <div className="refine-control-bar" data-testid="refine-control-bar" role="toolbar" aria-label="Refine recording controls">
         <div className="refine-indicator-wrapper" data-testid="recording-indicator">
           <div
@@ -369,6 +416,17 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
           onClick={handleToggleInspector}
         >
           🔍
+        </button>
+
+        <button
+          className={`refine-btn${showAnnotationTools ? ' refine-btn--inspect-active' : ''}${hasUnseenAnnotations ? ' refine-btn--has-badge' : ''}`}
+          title="Annotation tools (Ctrl+Shift+A)"
+          aria-label="Toggle annotation toolbar"
+          data-testid="btn-annotations"
+          tabIndex={0}
+          onClick={() => setShowAnnotationTools((v) => !v)}
+        >
+          ✏️
         </button>
 
         <button

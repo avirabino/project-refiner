@@ -79,6 +79,36 @@ export const VIGILSnapshotSchema = z.object({
 });
 export type VIGILSnapshot = z.infer<typeof VIGILSnapshotSchema>;
 
+// ── Annotations (Sprint 07 — visual markup) ─────────────────────────────────
+
+export const AnnotationKindSchema = z.enum(['comment', 'rectangle', 'circle', 'freehand']);
+export type AnnotationKind = z.infer<typeof AnnotationKindSchema>;
+
+export const AnnotationSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  kind: AnnotationKindSchema,
+  rect: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }).optional(),
+  circle: z.object({ cx: z.number(), cy: z.number(), rx: z.number(), ry: z.number() }).optional(),
+  freehand: z.object({ pathData: z.string() }).optional(),
+  comment: z.object({ x: z.number(), y: z.number() }).optional(),
+  commentEntityType: z.enum(['bug', 'feature']).optional(),
+  commentText: z.string().optional(),
+  linkedEntityId: z.string().optional(),
+  color: z.string(),
+  strokeWidth: z.number(),
+  pageUrl: z.string(),
+  elementSelector: z.string().optional(),
+  viewportWidth: z.number(),
+  viewportHeight: z.number(),
+  scrollX: z.number(),
+  scrollY: z.number(),
+  timestamp: z.number(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type Annotation = z.infer<typeof AnnotationSchema>;
+
 export const VIGILSessionSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -92,6 +122,7 @@ export const VIGILSessionSchema = z.object({
   snapshots: z.array(VIGILSnapshotSchema),
   bugs: z.array(BugSchema),
   features: z.array(FeatureSchema),
+  annotations: z.array(AnnotationSchema).default([]),
   pendingSync: z.boolean().optional(),
 });
 export type VIGILSession = z.infer<typeof VIGILSessionSchema>;
@@ -150,3 +181,10 @@ export const TEST_STATUS = {
   FAILING: '\uD83D\uDD34',
   ARCHIVED: '\u2B1C (archived)',
 } as const;
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+/** Strip `sprint_` prefix to normalize sprint values to bare numbers (e.g. "sprint_10" → "10"). */
+export function normalizeSprint(sprint: string): string {
+  return sprint.replace(/^sprint_/, '');
+}
