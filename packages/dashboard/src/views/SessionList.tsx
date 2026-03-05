@@ -117,7 +117,7 @@ export function SessionList({ sessions, selectedId, onSelect, onDelete }: Sessio
                   className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-red-600 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm(`Delete session "${session.name}"? This removes it from the database permanently.`)) {
+                    if (confirm(`Delete session "${session.name}"? Its bugs and features will also be permanently deleted.`)) {
                       onDelete(session.id);
                     }
                   }}

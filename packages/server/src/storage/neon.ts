@@ -152,6 +152,7 @@ export class NeonStorage implements StorageProvider {
 
   async deleteProject(projectId: string): Promise<boolean> {
     const pool = getPool();
+    // FK CASCADE: deleting a project cascades → sessions → bugs/features
     const result = await pool.query('DELETE FROM projects WHERE id = $1', [projectId]);
     return result.rowCount !== null && result.rowCount > 0;
   }
@@ -346,21 +347,23 @@ export class NeonStorage implements StorageProvider {
 
   async deleteSession(sessionId: string): Promise<boolean> {
     const pool = getPool();
-    // Cascade: remove bugs/features linked to this session first
-    await pool.query('DELETE FROM bugs WHERE session_id = $1', [sessionId]);
-    await pool.query('DELETE FROM features WHERE session_id = $1', [sessionId]);
+    // FK CASCADE: deleting a session cascades → bugs/features
     const result = await pool.query('DELETE FROM sessions WHERE id = $1', [sessionId]);
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  /** Remove bugs/features whose session_id references a non-existent session */
+  /**
+   * Remove orphaned bugs/features — safety net.
+   * With FK constraints + CASCADE this should always return 0s,
+   * but kept for pre-migration data or edge cases.
+   */
   async cleanOrphans(): Promise<{ bugs: number; features: number }> {
     const pool = getPool();
     const bugResult = await pool.query(
-      'DELETE FROM bugs WHERE session_id IS NOT NULL AND session_id NOT IN (SELECT id FROM sessions)',
+      'DELETE FROM bugs WHERE session_id NOT IN (SELECT id FROM sessions)',
     );
     const featResult = await pool.query(
-      'DELETE FROM features WHERE session_id IS NOT NULL AND session_id NOT IN (SELECT id FROM sessions)',
+      'DELETE FROM features WHERE session_id NOT IN (SELECT id FROM sessions)',
     );
     return {
       bugs: bugResult.rowCount ?? 0,

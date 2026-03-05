@@ -24,6 +24,15 @@ sessionRouter.post('/', async (req, res) => {
   const storage = getStorage();
 
   try {
+    // Validate project exists (sessions can't be orphaned)
+    const project = await storage.getProject(session.projectId);
+    if (!project) {
+      res.status(400).json({
+        error: `Project '${session.projectId}' does not exist. Create it in the dashboard first.`,
+      });
+      return;
+    }
+
     // Write raw session JSON
     await storage.writeSessionJson(session);
 

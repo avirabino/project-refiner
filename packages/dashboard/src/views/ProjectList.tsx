@@ -114,7 +114,7 @@ export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsu
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete project "${name}"? Sessions will remain but will be unlinked.`)) return;
+    if (!confirm(`Delete project "${name}"? All its sessions, bugs, and features will be permanently deleted.`)) return;
     try {
       await deleteProject(id);
       onRefresh();

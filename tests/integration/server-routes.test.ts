@@ -9,21 +9,33 @@ import request from 'supertest';
 const { mockStorage } = vi.hoisted(() => ({
   mockStorage: {
     name: 'mock',
+    // Projects
+    listProjects: vi.fn(),
+    getProject: vi.fn(),
+    createProject: vi.fn(),
+    updateProject: vi.fn(),
+    deleteProject: vi.fn(),
+    // Bugs
     listBugs: vi.fn(),
     getBug: vi.fn(),
     writeBug: vi.fn(),
     updateBug: vi.fn(),
     closeBug: vi.fn(),
+    // Features
     listFeatures: vi.fn(),
     getFeature: vi.fn(),
     writeFeature: vi.fn(),
+    // Sessions
     writeSessionJson: vi.fn(),
     listSessions: vi.fn(),
     getSession: vi.fn(),
+    deleteSession: vi.fn(),
+    // Counters
     nextBugId: vi.fn(),
     nextFeatId: vi.fn(),
     currentBugCount: vi.fn(),
     currentFeatCount: vi.fn(),
+    // Sprints
     listSprints: vi.fn(),
   },
 }));
@@ -138,6 +150,7 @@ describe('GET /health', () => {
 
 describe('POST /api/session', () => {
   it('accepts valid session payload', async () => {
+    mockStorage.getProject.mockResolvedValue({ id: 'test-project', name: 'Test' });
     mockStorage.writeSessionJson.mockResolvedValue('vigil-SESSION-20260301-001');
     const payload = makeValidSessionPayload();
     const res = await request(app).post('/api/session').send(payload);
@@ -148,6 +161,7 @@ describe('POST /api/session', () => {
   });
 
   it('writes bugs from session payload', async () => {
+    mockStorage.getProject.mockResolvedValue({ id: 'test-project', name: 'Test' });
     mockStorage.writeSessionJson.mockResolvedValue('vigil-SESSION-20260301-001');
     mockStorage.writeBug.mockResolvedValue('BUG-001');
     const payload = makeValidSessionPayload();
@@ -169,6 +183,15 @@ describe('POST /api/session', () => {
     expect(res.body.bugIds).toHaveLength(1);
   });
 
+  it('rejects session with non-existent project', async () => {
+    mockStorage.getProject.mockResolvedValue(null);
+    const payload = makeValidSessionPayload();
+    payload.projectId = 'no-such-project';
+    const res = await request(app).post('/api/session').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('does not exist');
+  });
+
   it('rejects invalid payload with 400', async () => {
     const res = await request(app).post('/api/session').send({ bad: 'data' });
     expect(res.status).toBe(400);
@@ -176,6 +199,7 @@ describe('POST /api/session', () => {
   });
 
   it('returns 500 on storage error', async () => {
+    mockStorage.getProject.mockResolvedValue({ id: 'test-project', name: 'Test' });
     mockStorage.writeSessionJson.mockRejectedValue(new Error('DB down'));
     const payload = makeValidSessionPayload();
     const res = await request(app).post('/api/session').send(payload);

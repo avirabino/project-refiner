@@ -90,15 +90,22 @@ projectsRouter.patch('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/projects/:id — delete a project
+// DELETE /api/projects/:id — delete a project (cascades to sessions → bugs/features)
 projectsRouter.delete('/:id', async (req, res) => {
+  const storage = getStorage();
   try {
-    const deleted = await getStorage().deleteProject(req.params.id);
+    // Count what will be cascade-deleted for response
+    const sessions = await storage.listSessions(req.params.id);
+    const deleted = await storage.deleteProject(req.params.id);
     if (!deleted) {
       res.status(404).json({ error: 'Project not found' });
       return;
     }
-    res.json({ ok: true, deletedId: req.params.id });
+    res.json({
+      ok: true,
+      deletedId: req.params.id,
+      cascaded: { sessions: sessions.length },
+    });
   } catch (err) {
     console.error('[vigil-server] Error deleting project:', err);
     res.status(500).json({ error: 'Failed to delete project' });
