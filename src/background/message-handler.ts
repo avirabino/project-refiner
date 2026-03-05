@@ -361,26 +361,46 @@ export function handleMessage(
           }
 
           // Reconstruct VIGILSession from IndexedDB tables
-          const [bugs, features, screenshots, chunks] = await Promise.all([
+          const [bugs, features, screenshots, chunks, annotations] = await Promise.all([
             getBugsBySession(sessionId),
             getFeaturesBySession(sessionId),
             getScreenshotsBySession(sessionId),
             getRecordingChunks(sessionId),
+            getAnnotationsBySession(sessionId),
           ]);
 
           // Group recording chunks into a single VIGILRecording
+          // Compress events to stay under Vercel's 4.5MB body limit
+          const { compressEvents } = await import('@core/compression');
           const recordings: VIGILRecording[] = [];
           if (chunks.length > 0) {
+            const compressedChunks = await Promise.all(
+              chunks.map(async (c) => {
+                try {
+                  const compressed = await compressEvents(c.events ?? []);
+                  return {
+                    chunkIndex: c.chunkIndex,
+                    pageUrl: c.pageUrl,
+                    events: [] as unknown[],
+                    createdAt: c.createdAt,
+                    compressed: true,
+                    data: compressed,
+                  };
+                } catch {
+                  return {
+                    chunkIndex: c.chunkIndex,
+                    pageUrl: c.pageUrl,
+                    events: c.events ?? [],
+                    createdAt: c.createdAt,
+                  };
+                }
+              }),
+            );
             recordings.push({
               id: `rec-${sessionId}`,
               startedAt: session.startedAt,
               endedAt: session.stoppedAt ?? (session.startedAt + (session.duration ?? 0)),
-              rrwebChunks: chunks.map((c) => ({
-                chunkIndex: c.chunkIndex,
-                pageUrl: c.pageUrl,
-                events: c.events ?? [],
-                createdAt: c.createdAt,
-              })),
+              rrwebChunks: compressedChunks,
               mouseTracking: session.recordMouseMove ?? false,
             });
           }
@@ -407,7 +427,7 @@ export function handleMessage(
             snapshots,
             bugs,
             features,
-            annotations: [],
+            annotations,
           };
 
           // POST to server

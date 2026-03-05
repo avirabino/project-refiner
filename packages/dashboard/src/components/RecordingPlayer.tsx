@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import type { RecordingItem } from '../types';
 import { loadRrwebPlayer } from './rrweb-loader';
 
@@ -14,20 +14,56 @@ export interface RecordingPlayerProps {
   height?: number;
 }
 
-function flattenEvents(recordings: RecordingItem[]): RrwebEvent[] {
+// ── Decompression (mirrors src/core/compression.ts for the dashboard) ────────
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function decompressEvents(base64: string): Promise<unknown[]> {
+  const arrayBuffer = base64ToArrayBuffer(base64);
+  const stream = new Response(arrayBuffer).body;
+  if (!stream) throw new Error('Failed to create decompression stream');
+  const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+  const response = new Response(decompressedStream);
+  const jsonStr = await response.text();
+  return JSON.parse(jsonStr);
+}
+
+// ── Flatten + decompress rrweb events from all recordings ────────────────────
+
+async function flattenEventsAsync(recordings: RecordingItem[]): Promise<RrwebEvent[]> {
   const events: RrwebEvent[] = [];
+
   for (const rec of recordings) {
     for (const chunk of rec.rrwebChunks) {
-      if (Array.isArray(chunk.events)) {
-        for (const evt of chunk.events) {
-          const e = evt as RrwebEvent;
-          if (e && typeof e.timestamp === 'number') {
-            events.push(e);
-          }
+      // Handle compressed chunks (gzip → base64 in chunk.data)
+      let chunkEvents: unknown[] = [];
+
+      if (chunk.compressed && chunk.data) {
+        try {
+          chunkEvents = await decompressEvents(chunk.data);
+        } catch (err) {
+          console.warn('[RecordingPlayer] Failed to decompress chunk:', err);
+        }
+      } else if (Array.isArray(chunk.events)) {
+        chunkEvents = chunk.events;
+      }
+
+      for (const evt of chunkEvents) {
+        const e = evt as RrwebEvent;
+        if (e && typeof e.timestamp === 'number') {
+          events.push(e);
         }
       }
     }
   }
+
   events.sort((a, b) => a.timestamp - b.timestamp);
   return events;
 }
@@ -37,6 +73,8 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
     const containerRef = useRef<HTMLDivElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const playerRef = useRef<any>(null);
+    const [events, setEvents] = useState<RrwebEvent[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const gotoFn = useCallback((timeOffset: number) => {
       if (playerRef.current?.goto) {
@@ -46,7 +84,26 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
 
     useImperativeHandle(ref, () => ({ goto: gotoFn }), [gotoFn]);
 
-    const events = flattenEvents(recordings);
+    // Decompress and flatten events on mount / recording change
+    useEffect(() => {
+      let cancelled = false;
+      setLoading(true);
+
+      flattenEventsAsync(recordings).then((evts) => {
+        if (!cancelled) {
+          setEvents(evts);
+          setLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setEvents([]);
+          setLoading(false);
+        }
+      });
+
+      return () => { cancelled = true; };
+    }, [recordings]);
+
     const hasEvents = events.length > 0;
 
     useEffect(() => {
@@ -89,7 +146,19 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
         container.innerHTML = '';
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasEvents, recordings, width, height]);
+    }, [hasEvents, events, width, height]);
+
+    if (loading) {
+      return (
+        <div
+          data-testid="recording-player"
+          className="bg-white rounded-xl border border-slate-200 p-8 text-center"
+        >
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-3" />
+          <div className="text-sm text-slate-500">Decompressing recording...</div>
+        </div>
+      );
+    }
 
     if (!hasEvents) {
       return (

@@ -14,7 +14,10 @@ import {
   getSession,
   updateSession,
   getSessionsForToday,
+  getRecordingChunks,
+  getAnnotationsBySession,
 } from '@core/db';
+import { compressEvents } from '@core/compression';
 import { startKeepAlive, stopKeepAlive } from './keep-alive';
 
 interface ActiveSessionState {
@@ -544,6 +547,63 @@ export const vigilSessionManager = {
     const now = Date.now();
     vigilState.session.endedAt = now;
     vigilState.session.clock = now - vigilState.session.startedAt;
+
+    // Reconstruct recordings from IndexedDB (chunks are stored there by the
+    // RECORDING_CHUNK handler but never added to the in-memory session).
+    // Compress events via gzip to stay under Vercel's 4.5MB body limit.
+    const legacySessionId = sessionManager.getActiveSessionId() ?? vigilState.session.id;
+    try {
+      const [chunks, annotations] = await Promise.all([
+        getRecordingChunks(legacySessionId),
+        getAnnotationsBySession(legacySessionId),
+      ]);
+
+      if (chunks.length > 0) {
+        const compressedChunks = await Promise.all(
+          chunks.map(async (c) => {
+            try {
+              const compressed = await compressEvents(c.events ?? []);
+              return {
+                chunkIndex: c.chunkIndex,
+                pageUrl: c.pageUrl,
+                events: [] as unknown[],
+                createdAt: c.createdAt,
+                compressed: true,
+                data: compressed,
+              };
+            } catch {
+              // Fallback: send raw events if compression fails
+              return {
+                chunkIndex: c.chunkIndex,
+                pageUrl: c.pageUrl,
+                events: c.events ?? [],
+                createdAt: c.createdAt,
+              };
+            }
+          }),
+        );
+
+        // Replace in-memory recordings with reconstructed data
+        vigilState.session.recordings = [{
+          id: vigilState.session.recordings[0]?.id ?? `rec-${legacySessionId}`,
+          startedAt: vigilState.session.startedAt,
+          endedAt: now,
+          rrwebChunks: compressedChunks,
+          mouseTracking: vigilState.session.recordings[0]?.mouseTracking ?? false,
+        }];
+
+        console.log(`[Vigil] Reconstructed ${chunks.length} recording chunks (compressed) from IndexedDB`);
+      }
+
+      // Merge annotations from IndexedDB if in-memory list is empty
+      if (vigilState.session.annotations.length === 0 && annotations.length > 0) {
+        vigilState.session.annotations = annotations;
+        console.log(`[Vigil] Merged ${annotations.length} annotations from IndexedDB`);
+      }
+    } catch (e) {
+      console.warn('[Vigil] Failed to reconstruct recordings from IndexedDB:', (e as Error).message);
+      // Proceed with whatever is in-memory (may have empty recordings)
+    }
 
     const finalSession = { ...vigilState.session };
 

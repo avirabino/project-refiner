@@ -33,29 +33,51 @@ sessionRouter.post('/', async (req, res) => {
       return;
     }
 
-    // Write raw session JSON
+    // Write raw session JSON (with embedded bugs/features/recordings)
     await storage.writeSessionJson(session);
 
-    // Write bug files
+    // Write individual bug records (each in its own try/catch so
+    // one failure doesn't prevent the rest from being written).
     const bugIds: string[] = [];
+    const bugErrors: string[] = [];
     for (const bug of session.bugs) {
-      const bugId = await storage.writeBug(bug, sprint);
-      bugIds.push(bugId);
+      try {
+        const bugId = await storage.writeBug(bug, sprint);
+        bugIds.push(bugId);
+      } catch (bugErr) {
+        const msg = bugErr instanceof Error ? bugErr.message : String(bugErr);
+        console.error(`[vigil-server] writeBug failed for "${bug.title}":`, msg);
+        bugErrors.push(msg);
+      }
     }
 
-    // Write feature files
+    // Write individual feature records
     const featIds: string[] = [];
+    const featErrors: string[] = [];
     for (const feat of session.features) {
-      const featId = await storage.writeFeature(feat, sprint);
-      featIds.push(featId);
+      try {
+        const featId = await storage.writeFeature(feat, sprint);
+        featIds.push(featId);
+      } catch (featErr) {
+        const msg = featErr instanceof Error ? featErr.message : String(featErr);
+        console.error(`[vigil-server] writeFeature failed for "${feat.title}":`, msg);
+        featErrors.push(msg);
+      }
     }
 
+    const hasErrors = bugErrors.length > 0 || featErrors.length > 0;
     res.status(201).json({
       sessionId: session.id,
       bugsWritten: bugIds.length,
       featuresWritten: featIds.length,
       bugIds,
       featIds,
+      ...(hasErrors && {
+        warnings: {
+          bugErrors: bugErrors.length > 0 ? bugErrors : undefined,
+          featErrors: featErrors.length > 0 ? featErrors : undefined,
+        },
+      }),
     });
   } catch (err) {
     console.error('[vigil-server] Error processing session:', err);

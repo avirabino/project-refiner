@@ -98,10 +98,17 @@ describe('handleMessage routing', () => {
 
   it('GET_PROJECT_SPRINTS with valid projectPath attempts fetch to vigil-server', async () => {
     const mockData = { exists: true, sprints: [{ id: '07', name: 'sprint_07' }], current: 'sprint_07' };
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockData),
-    } as Response);
+    // Use mockImplementation instead of mockResolvedValueOnce to avoid race
+    // with background postWithRetry retries from the earlier STOP_RECORDING test.
+    const realFetch = globalThis.fetch;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
+      if (url.includes('/api/sprints/project')) {
+        return { ok: true, json: () => Promise.resolve(mockData) } as Response;
+      }
+      // All other fetch calls (e.g. postWithRetry retries) → use real fetch (will fail naturally)
+      return realFetch(input, init);
+    });
 
     const res = await call(MessageType.GET_PROJECT_SPRINTS, { projectPath: 'C:\\test\\project' });
     expect(res.ok).toBe(true);
