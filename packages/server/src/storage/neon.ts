@@ -35,7 +35,9 @@ ${actual ? `\n## Actual\n${actual}` : ''}
 ${regressionTest ? `\n## Regression Test\n${regressionTest}` : ''}
 ${resolution ? `\n## Resolution\n${resolution}` : ''}`;
 
-  return { id, title, status, severity, sprint, discovered, stepsToReproduce, expected, actual, regressionTest, resolution, raw };
+  const archivedAt = row.archived_at ? (row.archived_at as Date).toISOString() : null;
+
+  return { id, title, status, severity, sprint, discovered, stepsToReproduce, expected, actual, regressionTest, resolution, raw, archivedAt };
 }
 
 function rowToFeatureFile(row: Record<string, unknown>): FeatureFile {
@@ -53,10 +55,12 @@ function rowToFeatureFile(row: Record<string, unknown>): FeatureFile {
 ## Sprint: ${sprint}
 ${description ? `\n## Description\n${description}` : ''}`;
 
-  return { id, title, status, priority, sprint, description, raw };
+  const archivedAt = row.archived_at ? (row.archived_at as Date).toISOString() : null;
+
+  return { id, title, status, priority, sprint, description, raw, archivedAt };
 }
 
-const SESSION_SELECT_COLS = 'id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, annotations, sprint, description';
+const SESSION_SELECT_COLS = 'id, name, project_id, started_at, ended_at, clock, recordings, snapshots, bugs, features, annotations, sprint, description, archived_at';
 
 function rowToSession(row: Record<string, unknown>): VIGILSession | null {
   const obj = {
@@ -75,7 +79,10 @@ function rowToSession(row: Record<string, unknown>): VIGILSession | null {
     annotations: row.annotations ? (typeof row.annotations === 'string' ? JSON.parse(row.annotations) : row.annotations) : [],
   };
   const parsed = VIGILSessionSchema.safeParse(obj);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  const session = parsed.data as VIGILSession & { archivedAt?: string | null };
+  session.archivedAt = row.archived_at ? (row.archived_at as Date).toISOString() : null;
+  return session;
 }
 
 function rowToProject(row: Record<string, unknown>): ProjectRecord {

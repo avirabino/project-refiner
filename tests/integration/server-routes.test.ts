@@ -101,6 +101,7 @@ function makeBugFile(overrides: Record<string, unknown> = {}) {
     sprint: '07',
     discovered: '2026-03-01 via test',
     raw: '# BUG-001 — Test bug',
+    archivedAt: null,
     ...overrides,
   };
 }
@@ -113,6 +114,7 @@ function makeFeatureFile(overrides: Record<string, unknown> = {}) {
     priority: 'ENHANCEMENT',
     sprint: '07',
     raw: '# FEAT-001 — Test feature',
+    archivedAt: null,
     ...overrides,
   };
 }

@@ -46,7 +46,7 @@ sessionRouter.post('/', async (req, res) => {
         bugIds.push(bugId);
       } catch (bugErr) {
         const msg = bugErr instanceof Error ? bugErr.message : String(bugErr);
-        console.error(`[vigil-server] writeBug failed for "${bug.title}":`, msg);
+        console.error(`[vigil-server] writeBug failed for "${bug.title}" (session: ${session.id}, sprint: ${sprint}):`, msg);
         bugErrors.push(msg);
       }
     }
@@ -60,7 +60,7 @@ sessionRouter.post('/', async (req, res) => {
         featIds.push(featId);
       } catch (featErr) {
         const msg = featErr instanceof Error ? featErr.message : String(featErr);
-        console.error(`[vigil-server] writeFeature failed for "${feat.title}":`, msg);
+        console.error(`[vigil-server] writeFeature failed for "${feat.title}" (session: ${session.id}, sprint: ${sprint}):`, msg);
         featErrors.push(msg);
       }
     }

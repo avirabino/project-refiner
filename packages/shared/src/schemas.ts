@@ -153,6 +153,7 @@ export interface BugFile {
   regressionTest?: string;
   resolution?: string;
   raw: string;
+  archivedAt?: string | null;
 }
 
 export interface FeatureFile {
@@ -163,6 +164,7 @@ export interface FeatureFile {
   sprint: string;
   description?: string;
   raw: string;
+  archivedAt?: string | null;
 }
 
 export interface HealthStatus {

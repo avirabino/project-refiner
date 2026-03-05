@@ -18,6 +18,7 @@ function toSummary(s: VIGILSession) {
     bugCount: s.bugs.length,
     featureCount: s.features.length,
     annotationCount: s.annotations.length,
+    archivedAt: (s as VIGILSession & { archivedAt?: string | null }).archivedAt ?? null,
   };
 }
 
