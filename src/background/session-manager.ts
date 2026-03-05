@@ -49,7 +49,7 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
     });
     return true;
   } catch (e) {
-    console.log('[Refine] Content script missing, injecting...', e);
+    console.log('[Vigil] Content script missing, injecting...', e);
     // Script missing, try to inject
     try {
       const manifest = await fetch(chrome.runtime.getURL('manifest.json')).then(r => r.json());
@@ -62,7 +62,7 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
       await new Promise(r => setTimeout(r, 500));
       return true;
     } catch (injectErr) {
-      console.error('[Refine] Injection failed:', injectErr);
+      console.error('[Vigil] Injection failed:', injectErr);
       return false;
     }
   }
@@ -79,7 +79,7 @@ async function sendStartRecording(tabId: number, payload: { sessionId: string; r
       });
       return true;
     } catch (e) {
-      console.warn(`[Refine] START_RECORDING attempt ${i + 1} failed:`, e);
+      console.warn(`[Vigil] START_RECORDING attempt ${i + 1} failed:`, e);
       if (i < retries - 1) {
         // Try injecting if it might be missing
         await ensureContentScript(tabId);
@@ -97,8 +97,8 @@ function notifyTab(tabId: number | undefined, type: string, payload?: unknown): 
   if (type === 'START_RECORDING') {
     const startPayload = payload as { sessionId: string; recordMouseMove: boolean };
     sendStartRecording(tabId, startPayload).then(success => {
-      if (!success) console.error('[Refine] Failed to start recording on tab', tabId);
-      else console.log('[Refine] Recording started on tab', tabId);
+      if (!success) console.error('[Vigil] Failed to start recording on tab', tabId);
+      else console.log('[Vigil] Recording started on tab', tabId);
     });
     return;
   }
@@ -106,7 +106,7 @@ function notifyTab(tabId: number | undefined, type: string, payload?: unknown): 
   // Standard notification for other events
   chrome.tabs.sendMessage(tabId, { type, payload, source: 'background' }, () => {
     if (!chrome.runtime.lastError) return;
-    console.warn('[Refine] Tab notify failed:', chrome.runtime.lastError.message);
+    console.warn('[Vigil] Tab notify failed:', chrome.runtime.lastError.message);
   });
 }
 
@@ -114,7 +114,7 @@ export const sessionManager = {
   setTabId(tabId: number): void {
     if (state.sessionId && !state.tabId) {
       state.tabId = tabId;
-      console.log('[Refine] Updated recording tabId from content script:', tabId);
+      console.log('[Vigil] Updated recording tabId from content script:', tabId);
     }
   },
 
@@ -130,7 +130,7 @@ export const sessionManager = {
     outputPath?: string
   ): Promise<Session> {
     if (state.sessionId) {
-      throw new Error(`[Refine] Session already active: ${state.sessionId}`);
+      throw new Error(`[Vigil] Session already active: ${state.sessionId}`);
     }
     const sequence = await getNextSequence();
     const id = generateSessionId(new Date(), sequence);
@@ -169,7 +169,7 @@ export const sessionManager = {
     startKeepAlive();
     notifyTab(tabId, 'START_RECORDING', { sessionId: id, recordMouseMove });
 
-    console.log('[Refine] Session created:', id);
+    console.log('[Vigil] Session created:', id);
     return session;
   },
 
@@ -183,7 +183,7 @@ export const sessionManager = {
 
     await updateSession(state.sessionId, { status: SessionStatus.PAUSED });
     notifyTab(state.tabId, 'PAUSE_RECORDING');
-    console.log('[Refine] Session paused:', state.sessionId);
+    console.log('[Vigil] Session paused:', state.sessionId);
   },
 
   async resumeSession(): Promise<void> {
@@ -199,7 +199,7 @@ export const sessionManager = {
 
     await updateSession(state.sessionId, { status: SessionStatus.RECORDING });
     notifyTab(state.tabId, 'RESUME_RECORDING');
-    console.log('[Refine] Session resumed:', state.sessionId);
+    console.log('[Vigil] Session resumed:', state.sessionId);
   },
 
   async stopSession(): Promise<Session> {
@@ -226,7 +226,7 @@ export const sessionManager = {
     state.totalPausedMs = 0;
     state.tabId = undefined;
 
-    console.log('[Refine] Session stopped:', stoppedId);
+    console.log('[Vigil] Session stopped:', stoppedId);
     return { ...session, ...updates };
   },
 
@@ -237,7 +237,7 @@ export const sessionManager = {
       if (!session.pages.includes(url)) {
         updateSession(state.sessionId!, { pages: [...session.pages, url] });
       }
-    }).catch((err) => console.error('[Refine] addPage failed:', err));
+    }).catch((err) => console.error('[Vigil] addPage failed:', err));
   },
 
   getActiveSessionId(): string | null {

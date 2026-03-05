@@ -53,7 +53,7 @@ export function mountOverlay(sessionId: string, options: OverlayOptions = {}): v
   mountAnnotationCanvas();
   initAnnotationState(sessionId);
 
-  console.log('[Refine] Overlay mounted for session:', sessionId);
+  console.log('[Vigil] Overlay mounted for session:', sessionId);
 }
 
 export function unmountOverlay(): void {
@@ -69,5 +69,5 @@ export function unmountOverlay(): void {
     hostElement.remove();
     hostElement = null;
   }
-  console.log('[Refine] Overlay unmounted');
+  console.log('[Vigil] Overlay unmounted');
 }

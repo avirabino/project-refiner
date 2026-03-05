@@ -79,7 +79,7 @@ function sendToBackground(type: string, payload: unknown): void {
   try {
     chrome.runtime.sendMessage({ type, payload, source: 'content' }, () => {
       if (chrome.runtime.lastError) {
-        console.warn('[Refine] Background message failed:', chrome.runtime.lastError.message);
+        console.warn('[Vigil] Background message failed:', chrome.runtime.lastError.message);
       }
     });
   } catch {
@@ -103,18 +103,18 @@ function flushBuffer(final = false): void {
   state.bufferBytes = 0;
 
   if (final) {
-    console.log('[Refine] Final chunk flushed, index:', chunk.chunkIndex);
+    console.log('[Vigil] Final chunk flushed, index:', chunk.chunkIndex);
   }
 }
 
 export function startRecording(sessionId: string, recordMouseMove = false): void {
   if (state.isRecording) {
     // Benign: on-load status check and background START_RECORDING can both fire
-    console.debug('[Refine] Already recording — ignoring duplicate start');
+    console.debug('[Vigil] Already recording — ignoring duplicate start');
     return;
   }
   if (!SESSION_ID_FORMAT.test(sessionId)) {
-    console.error('[Refine] Invalid session ID format, refusing to start:', sessionId);
+    console.error('[Vigil] Invalid session ID format, refusing to start:', sessionId);
     return;
   }
 
@@ -154,20 +154,20 @@ export function startRecording(sessionId: string, recordMouseMove = false): void
   document.addEventListener('click', onDocumentClick, { capture: true });
   document.addEventListener('change', onDocumentChange, { capture: true });
 
-  console.log('[Refine] Recording started for session:', sessionId);
+  console.log('[Vigil] Recording started for session:', sessionId);
 }
 
 export function pauseRecording(): void {
   if (!state.isRecording || state.isPaused) return;
   state.isPaused = true;
   flushBuffer();
-  console.log('[Refine] Recording paused');
+  console.log('[Vigil] Recording paused');
 }
 
 export function resumeRecording(): void {
   if (!state.isRecording || !state.isPaused) return;
   state.isPaused = false;
-  console.log('[Refine] Recording resumed');
+  console.log('[Vigil] Recording resumed');
 }
 
 export function stopRecording(): void {
@@ -186,7 +186,7 @@ export function stopRecording(): void {
   state.isRecording = false;
   state.isPaused = false;
   state.sessionId = null;
-  console.log('[Refine] Recording stopped');
+  console.log('[Vigil] Recording stopped');
 }
 
 export function handleNavigation(toUrl: string): void {
@@ -202,7 +202,7 @@ export function handleNavigation(toUrl: string): void {
   sendToBackground(MessageType.SESSION_STATUS_UPDATE, { url: toUrl });
 
   state.lastUrl = toUrl;
-  console.log('[Refine] Navigation recorded:', fromUrl, '→', toUrl);
+  console.log('[Vigil] Navigation recorded:', fromUrl, '→', toUrl);
 }
 
 /**

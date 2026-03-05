@@ -10,18 +10,18 @@ const INTERVAL_MINUTES = 0.4; // 24 seconds
 
 export function startKeepAlive(): void {
   chrome.alarms.create(KEEPALIVE_ALARM_NAME, { periodInMinutes: INTERVAL_MINUTES });
-  console.log('[Refine] Keep-alive started');
+  console.log('[Vigil] Keep-alive started');
 }
 
 export function stopKeepAlive(): void {
   chrome.alarms.clear(KEEPALIVE_ALARM_NAME);
-  console.log('[Refine] Keep-alive stopped');
+  console.log('[Vigil] Keep-alive stopped');
 }
 
 export function initKeepAliveListener(): void {
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === KEEPALIVE_ALARM_NAME) {
-      console.log('[Refine] Keep-alive ping', new Date().toISOString());
+      console.log('[Vigil] Keep-alive ping', new Date().toISOString());
     }
   });
 }

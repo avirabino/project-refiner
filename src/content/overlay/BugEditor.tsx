@@ -48,7 +48,7 @@ const BugEditor: React.FC<BugEditorProps> = ({
             { type: MessageType.CAPTURE_SCREENSHOT, payload: { sessionId }, source: 'content' },
             (response) => {
               if (chrome.runtime.lastError || !response?.ok) {
-                console.warn('[Refine] Auto-screenshot failed:', chrome.runtime.lastError?.message);
+                console.warn('[Vigil] Auto-screenshot failed:', chrome.runtime.lastError?.message);
                 resolve(undefined);
               } else {
                 resolve(response.data?.screenshotId as string | undefined);

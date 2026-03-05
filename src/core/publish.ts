@@ -176,7 +176,7 @@ export async function publishSession(
 
     await Promise.all(downloads);
   } catch (err) {
-    console.error('[Refine] Publish failed:', err);
+    console.error('[Vigil] Publish failed:', err);
     throw err;
   }
 }

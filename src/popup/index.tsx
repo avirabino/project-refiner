@@ -11,7 +11,7 @@ import './popup.css';
 // Create React root and render App
 const container = document.getElementById('root');
 if (!container) {
-  throw new Error('[Refine] Missing root element in popup.html');
+  throw new Error('[Vigil] Missing root element in popup.html');
 }
 
 const root = createRoot(container);

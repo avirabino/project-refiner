@@ -33,7 +33,7 @@ test('screenshot button captures and persists a screenshot', async ({ context, e
   // 4. No extension errors from the capture
   const errors: string[] = [];
   page.on('console', msg => {
-    if (msg.type() === 'error' && msg.text().includes('[Refine]')) errors.push(msg.text());
+    if (msg.type() === 'error' && msg.text().includes('[Vigil]')) errors.push(msg.text());
   });
   expect(errors, `Screenshot errors: ${errors.join(', ')}`).toHaveLength(0);
 

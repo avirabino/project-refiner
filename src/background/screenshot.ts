@@ -26,7 +26,7 @@ export async function captureScreenshot(
   const dataUrl = await new Promise<string>((resolve) => {
     chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 80 }, (result) => {
       if (chrome.runtime.lastError || !result) {
-        console.warn('[Refine] captureVisibleTab unavailable:', chrome.runtime.lastError?.message ?? 'empty result');
+        console.warn('[Vigil] captureVisibleTab unavailable:', chrome.runtime.lastError?.message ?? 'empty result');
         // Fallback: store a 1×1 placeholder so the session screenshot count is still recorded
         resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
       } else {
@@ -54,7 +54,7 @@ export async function captureScreenshot(
     await updateSession(sessionId, { screenshotCount: session.screenshotCount + 1 });
   }
 
-  console.log('[Refine] Screenshot captured:', screenshot.id);
+  console.log('[Vigil] Screenshot captured:', screenshot.id);
   return screenshot;
 }
 

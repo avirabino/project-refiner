@@ -87,17 +87,17 @@ export function handleMessage(
         chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
           const target = tabs.find(t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://'));
           if (target?.id) {
-             console.log('[Refine] Auto-detected target tab:', target.id);
+             console.log('[Vigil] Auto-detected target tab:', target.id);
              startSession(target.id);
           } else {
              // Try getting ANY active tab in any window that is a valid page
              chrome.tabs.query({ active: true }, (allTabs) => {
                const anyTarget = allTabs.find(t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://'));
                if (anyTarget?.id) {
-                 console.log('[Refine] Auto-detected target tab (fallback):', anyTarget.id);
+                 console.log('[Vigil] Auto-detected target tab (fallback):', anyTarget.id);
                  startSession(anyTarget.id);
                } else {
-                 console.warn('[Refine] No target tab found for session');
+                 console.warn('[Vigil] No target tab found for session');
                  startSession(undefined); // Start without a tab (will record but no overlay)
                }
              });
@@ -529,7 +529,7 @@ export function handleMessage(
     }
 
     default:
-      console.warn('[Refine] Unknown message type:', message.type);
+      console.warn('[Vigil] Unknown message type:', message.type);
       sendResponse({ ok: false, error: `Unknown message type: ${message.type}` });
       return false;
   }

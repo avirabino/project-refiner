@@ -209,7 +209,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         });
       }
     } catch (err) {
-      console.error('[Refine] Export failed:', err);
+      console.error('[Vigil] Export failed:', err);
       setExportError(err instanceof Error ? err.message : 'Export failed');
     } finally {
       setExportLoading(null);

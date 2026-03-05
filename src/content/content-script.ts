@@ -17,7 +17,7 @@ import './inspector'; // R023: registers refine:toggle-inspector listener
 import { SHORTCUT_MAP } from '@shared/constants';
 import { safeSendMessage } from './safe-message';
 
-console.log(`[Refine] Content script loaded on: ${window.location.href}`);
+console.log(`[Vigil] Content script loaded on: ${window.location.href}`);
 
 // ── On-load: resume recording if a session is already active ─────────────────
 

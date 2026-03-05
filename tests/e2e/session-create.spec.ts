@@ -29,7 +29,7 @@ test('creating a session via popup starts recording and shows control bar on tar
   // 5. No extension errors in console
   const errors: string[] = [];
   targetPage.on('console', msg => {
-    if (msg.type() === 'error' && msg.text().includes('[Refine]')) errors.push(msg.text());
+    if (msg.type() === 'error' && msg.text().includes('[Vigil]')) errors.push(msg.text());
   });
   await targetPage.waitForTimeout(500);
   expect(errors, `Extension errors: ${errors.join(', ')}`).toHaveLength(0);

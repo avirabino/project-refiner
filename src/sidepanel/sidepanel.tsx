@@ -10,7 +10,7 @@ import App from '@popup/App';
 import '@popup/popup.css';
 
 const container = document.getElementById('root');
-if (!container) throw new Error('[Refine] Missing root element in sidepanel.html');
+if (!container) throw new Error('[Vigil] Missing root element in sidepanel.html');
 
 createRoot(container).render(
   <React.StrictMode>

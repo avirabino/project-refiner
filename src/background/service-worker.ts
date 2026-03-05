@@ -12,7 +12,7 @@ import { getAllSessions, getRecordingChunks, updateRecordingChunk } from '@core/
 import { compressEvents } from '@core/compression';
 import { SessionStatus } from '@shared/types';
 
-console.log('[Refine] Background service worker initialized.');
+console.log('[Vigil] Background service worker initialized.');
 
 // Open the side panel when the extension icon is clicked
 chrome.action.onClicked.addListener((tab) => {
@@ -81,12 +81,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
               data: compressedData,
               events: [] // Clear raw events to free IndexedDB space
             });
-            console.log(`[Refine] Compressed chunk ${chunk.id} for session ${session.id}`);
+            console.log(`[Vigil] Compressed chunk ${chunk.id} for session ${session.id}`);
           }
         }
       }
     }
   } catch (err) {
-    console.error('[Refine] Compression daemon error:', err);
+    console.error('[Vigil] Compression daemon error:', err);
   }
 });

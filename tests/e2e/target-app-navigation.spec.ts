@@ -31,7 +31,7 @@ test('extension stays active across target app page navigations', async ({ conte
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveURL(/localhost:38470/);
 
-  // Verify no extension errors in console (no "[Refine] ERROR" messages)
-  const extensionErrors = consoleMessages.filter(m => m.includes('[Refine] ERROR'));
+  // Verify no extension errors in console (no "[Vigil] ERROR" messages)
+  const extensionErrors = consoleMessages.filter(m => m.includes('[Vigil] ERROR'));
   expect(extensionErrors, `Unexpected extension errors: ${JSON.stringify(extensionErrors)}`).toHaveLength(0);
 });

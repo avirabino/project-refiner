@@ -11,6 +11,6 @@ test('content script injects on QA target app and logs to console', async ({ con
   await page.goto('http://localhost:38470');
   await page.waitForTimeout(1500);
 
-  const injected = consoleMessages.some(m => m.includes('[Refine] Content script loaded'));
-  expect(injected, `Expected "[Refine] Content script loaded" in console. Got: ${JSON.stringify(consoleMessages)}`).toBe(true);
+  const injected = consoleMessages.some(m => m.includes('[Vigil] Content script loaded'));
+  expect(injected, `Expected "[Vigil] Content script loaded" in console. Got: ${JSON.stringify(consoleMessages)}`).toBe(true);
 });

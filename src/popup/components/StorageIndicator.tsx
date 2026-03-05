@@ -15,7 +15,7 @@ export const StorageIndicator: React.FC = () => {
           const result = await navigator.storage.estimate();
           setEstimate({ usage: result.usage || 0, quota: result.quota || 0 });
         } catch (err) {
-          console.warn('[Refine] Failed to estimate storage:', err);
+          console.warn('[Vigil] Failed to estimate storage:', err);
         }
       }
     };

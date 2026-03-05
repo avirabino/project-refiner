@@ -46,7 +46,7 @@ function onClick(e: MouseEvent): void {
   const { selector } = getBestSelector(target);
   const sessionId = (window as typeof window & { __refineSessionId?: string }).__refineSessionId;
   if (!sessionId) {
-    console.warn('[Refine] Inspector: no active sessionId on window');
+    console.warn('[Vigil] Inspector: no active sessionId on window');
     return;
   }
 
@@ -59,7 +59,7 @@ function onClick(e: MouseEvent): void {
     timestamp: Date.now(),
   };
 
-  console.log(`[Refine] Inspector: ${selector}`);
+  console.log(`[Vigil] Inspector: ${selector}`);
   safeSendMessage({ type: MessageType.LOG_INSPECTOR_ELEMENT, payload: el, source: 'content' });
 }
 
@@ -69,7 +69,7 @@ function startInspector(): void {
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('mouseout', onMouseOut, true);
   document.addEventListener('click', onClick, true);
-  console.log('[Refine] Inspector activated');
+  console.log('[Vigil] Inspector activated');
 }
 
 function stopInspector(): void {
@@ -84,7 +84,7 @@ function stopInspector(): void {
     (lastHighlighted as HTMLElement).style.removeProperty('outline-offset');
     lastHighlighted = null;
   }
-  console.log('[Refine] Inspector deactivated');
+  console.log('[Vigil] Inspector deactivated');
 }
 
 export function isInspectorActive(): boolean {
