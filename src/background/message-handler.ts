@@ -69,7 +69,8 @@ export function handleMessage(
               // S07-16: Pass sprint + description for project-oriented sessions.
               try {
                 await vigilSessionManager.createSession(name, project ?? '', finalTabId, sprint, description);
-                console.log('[Vigil] Vigil session created alongside legacy session (idle)');
+                vigilSessionManager.startRecording(recordMouseMove ?? false);
+                console.log('[Vigil] Vigil session + recording created alongside legacy session');
               } catch (e) {
                 console.warn('[Vigil] Failed to create vigil session:', (e as Error).message);
               }
@@ -138,7 +139,7 @@ export function handleMessage(
           if (vigilSessionManager.hasActiveSession()) {
             try {
               startKeepAlive();
-              await vigilSessionManager.endSession();
+              await vigilSessionManager.endSession(session.id);
               console.log('[Vigil] Vigil session ended + POSTed on STOP_RECORDING');
             } catch (e) {
               console.warn('[Vigil] Failed to end vigil session:', (e as Error).message);

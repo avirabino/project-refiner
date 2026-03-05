@@ -536,7 +536,7 @@ export const vigilSessionManager = {
     persistState();
   },
 
-  async endSession(): Promise<VIGILSession> {
+  async endSession(legacyId?: string): Promise<VIGILSession> {
     if (!vigilState.session) {
       throw new Error('[Vigil] No active session to end');
     }
@@ -551,7 +551,7 @@ export const vigilSessionManager = {
     // Reconstruct recordings from IndexedDB (chunks are stored there by the
     // RECORDING_CHUNK handler but never added to the in-memory session).
     // Compress events via gzip to stay under Vercel's 4.5MB body limit.
-    const legacySessionId = sessionManager.getActiveSessionId() ?? vigilState.session.id;
+    const legacySessionId = legacyId ?? sessionManager.getActiveSessionId() ?? vigilState.session.id;
     try {
       const [chunks, annotations] = await Promise.all([
         getRecordingChunks(legacySessionId),

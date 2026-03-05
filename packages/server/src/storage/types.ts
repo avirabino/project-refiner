@@ -59,6 +59,7 @@ export interface StorageProvider {
 
   // Maintenance
   cleanOrphans?(): Promise<{ bugs: number; features: number }>;
+  backfillFromJsonb?(): Promise<{ bugsCreated: number; featuresCreated: number; errors: string[] }>;
 
   // Counters
   nextBugId(): Promise<string>;

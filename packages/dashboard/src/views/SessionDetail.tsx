@@ -42,7 +42,7 @@ function ScreenshotInline({ snapshot, onImageClick }: { snapshot: SnapshotItem; 
         <img
           src={snapshot.screenshotDataUrl}
           alt="Bug screenshot"
-          className="mt-2 rounded-lg border border-slate-200 max-w-full max-h-64 object-contain shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all"
+          className="mt-2 rounded-lg border border-slate-200 max-w-full max-h-[32rem] object-contain shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all"
           onClick={onImageClick}
         />
       )}
@@ -279,18 +279,18 @@ export function SessionDetail({ session }: SessionDetailProps) {
             <span>📸</span>
             Snapshots ({session.snapshots.length})
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {session.snapshots.map((snap) => (
               <div key={snap.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group">
                 {snap.screenshotDataUrl ? (
                   <img
                     src={snap.screenshotDataUrl}
                     alt={`Snapshot at ${formatClock(snap.capturedAt)}`}
-                    className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
                     onClick={() => openLightbox(snap.screenshotDataUrl)}
                   />
                 ) : (
-                  <div className="w-full h-32 bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">
+                  <div className="w-full h-64 bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">
                     📸
                   </div>
                 )}

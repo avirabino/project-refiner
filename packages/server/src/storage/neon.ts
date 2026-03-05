@@ -379,6 +379,73 @@ export class NeonStorage implements StorageProvider {
     };
   }
 
+  /**
+   * Backfill normalized bugs/features tables from session JSONB data.
+   * Detects missing records by session_id+title key and inserts them.
+   */
+  async backfillFromJsonb(): Promise<{ bugsCreated: number; featuresCreated: number; errors: string[] }> {
+    const pool = getPool();
+    const errors: string[] = [];
+    let bugsCreated = 0;
+    let featuresCreated = 0;
+
+    // 1. Get all sessions with JSONB data
+    const sessionsResult = await pool.query('SELECT id, bugs, features, sprint FROM sessions');
+
+    // 2. Build lookup sets from existing normalized records
+    const existingBugsResult = await pool.query('SELECT session_id, title FROM bugs');
+    const existingBugKeys = new Set(
+      existingBugsResult.rows.map((r: Record<string, unknown>) => `${r.session_id}::${r.title}`),
+    );
+
+    const existingFeatsResult = await pool.query('SELECT session_id, title FROM features');
+    const existingFeatKeys = new Set(
+      existingFeatsResult.rows.map((r: Record<string, unknown>) => `${r.session_id}::${r.title}`),
+    );
+
+    // 3. Walk each session and backfill missing records
+    for (const row of sessionsResult.rows) {
+      const sessionId = row.id as string;
+      const sprint = (row.sprint as string) ?? loadConfig().sprintCurrent;
+      const bugs = (typeof row.bugs === 'string' ? JSON.parse(row.bugs) : row.bugs) as Array<Record<string, unknown>>;
+      const features = (typeof row.features === 'string' ? JSON.parse(row.features) : row.features) as Array<Record<string, unknown>>;
+
+      for (const bug of bugs ?? []) {
+        const title = bug.title as string;
+        if (!title) continue;
+        const key = `${sessionId}::${title}`;
+        if (existingBugKeys.has(key)) continue;
+
+        try {
+          const bugObj = { sessionId, title, description: (bug.description as string) ?? '', priority: ((bug.priority as string) ?? 'P2') as 'P0' | 'P1' | 'P2' | 'P3', url: (bug.url as string) ?? '', timestamp: (bug.timestamp as number) ?? Date.now(), id: bug.id as string, type: 'bug' as const, status: ((bug.status as string) ?? 'open') as 'open' | 'in_progress' | 'resolved' | 'wontfix' };
+          await this.writeBug(bugObj, sprint);
+          existingBugKeys.add(key);
+          bugsCreated++;
+        } catch (e) {
+          errors.push(`Bug "${title}" (session ${sessionId}): ${(e as Error).message}`);
+        }
+      }
+
+      for (const feat of features ?? []) {
+        const title = feat.title as string;
+        if (!title) continue;
+        const key = `${sessionId}::${title}`;
+        if (existingFeatKeys.has(key)) continue;
+
+        try {
+          const featObj = { sessionId, title, description: (feat.description as string) ?? '', featureType: ((feat.featureType as string) ?? 'ENHANCEMENT') as 'ENHANCEMENT' | 'NEW_FEATURE' | 'UX_IMPROVEMENT', url: (feat.url as string) ?? '', timestamp: (feat.timestamp as number) ?? Date.now(), id: feat.id as string, type: 'feature' as const, status: ((feat.status as string) ?? 'open') as 'open' | 'planned' | 'in_sprint' | 'done' };
+          await this.writeFeature(featObj, sprint);
+          existingFeatKeys.add(key);
+          featuresCreated++;
+        } catch (e) {
+          errors.push(`Feature "${title}" (session ${sessionId}): ${(e as Error).message}`);
+        }
+      }
+    }
+
+    return { bugsCreated, featuresCreated, errors };
+  }
+
   async nextBugId(): Promise<string> {
     const pool = getPool();
     const result = await pool.query("SELECT nextval('bug_counter') AS val");

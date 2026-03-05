@@ -67,6 +67,22 @@ app.post('/api/admin/clean-orphans', async (_req, res) => {
   }
 });
 
+// Admin: backfill normalized bug/feature tables from session JSONB data
+app.post('/api/admin/backfill', async (_req, res) => {
+  try {
+    const storage = getStorage();
+    if (storage.backfillFromJsonb) {
+      const result = await storage.backfillFromJsonb();
+      res.json({ ok: true, ...result });
+    } else {
+      res.json({ ok: true, bugsCreated: 0, featuresCreated: 0, note: 'Not supported on this storage provider' });
+    }
+  } catch (err) {
+    console.error('[vigil-server] Error running backfill:', err);
+    res.status(500).json({ error: 'Failed to run backfill' });
+  }
+});
+
 // Serve dashboard static files — resolve from compiled dist/ up to public/
 const dashboardDir = resolve(__dirname, '..', 'public');
 app.use('/dashboard', express.static(dashboardDir, { index: 'index.html' }));
