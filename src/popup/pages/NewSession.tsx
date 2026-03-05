@@ -15,7 +15,23 @@ interface NewSessionProps {
   onCreated: (session: Session) => void;
 }
 
-const DASHBOARD_URL = 'http://localhost:7474/dashboard';
+const DEFAULT_DASHBOARD_URL = 'http://localhost:7474/dashboard';
+
+/** Read vigil.config.json (bundled in extension) and derive dashboard URL. */
+async function loadDashboardUrl(): Promise<string> {
+  try {
+    const configUrl = chrome.runtime.getURL('vigil.config.json');
+    const res = await fetch(configUrl);
+    if (res.ok) {
+      const config = await res.json();
+      const serverUrl: string = config.serverUrl ?? `http://localhost:${config.serverPort ?? 7474}`;
+      return `${serverUrl}/dashboard`;
+    }
+  } catch {
+    // config not bundled — use default
+  }
+  return DEFAULT_DASHBOARD_URL;
+}
 
 const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
   // Form state
@@ -30,6 +46,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
 
+  // Dashboard URL (derived from vigil.config.json serverUrl)
+  const [dashboardUrl, setDashboardUrl] = useState(DEFAULT_DASHBOARD_URL);
+
   // Tab state
   const [activeTabUrl, setActiveTabUrl] = useState('');
   const [activeTabId, setActiveTabId] = useState<number | undefined>(undefined);
@@ -39,8 +58,28 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
   const [error, setError] = useState<string | null>(null);
   const [sessionSequence, setSessionSequence] = useState(1);
 
-  // Load projects from server + active tab on mount
+  /** Fetch projects from server via background and return the list. */
+  const fetchProjects = (callback?: (list: ProjectInfo[]) => void) => {
+    chrome.runtime.sendMessage(
+      { type: MessageType.GET_PROJECTS, payload: {}, source: 'popup' },
+      (response) => {
+        setProjectsLoading(false);
+        if (chrome.runtime.lastError || !response?.ok) {
+          setProjectsError('Could not load projects — is vigil-server running?');
+          return;
+        }
+        const list = (response.data?.projects ?? []) as ProjectInfo[];
+        setProjects(list);
+        callback?.(list);
+      }
+    );
+  };
+
+  // Load config, projects, and active tab on mount
   useEffect(() => {
+    // Load dashboard URL from vigil.config.json
+    loadDashboardUrl().then(setDashboardUrl);
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const target = tabs.find(
         t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://')
@@ -53,26 +92,30 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
       }
     });
 
-    // Fetch projects from vigil-server via background
-    chrome.runtime.sendMessage(
-      { type: MessageType.GET_PROJECTS, payload: {}, source: 'popup' },
-      (response) => {
-        setProjectsLoading(false);
-        if (chrome.runtime.lastError || !response?.ok) {
-          setProjectsError('Could not load projects — is vigil-server running?');
-          return;
-        }
-        const list = (response.data?.projects ?? []) as ProjectInfo[];
-        setProjects(list);
-        // Auto-select last used project
-        chrome.storage.local.get(['vigilLastProjectId'], (res) => {
+    // Fetch projects and handle auto-select for newly created projects
+    fetchProjects((list) => {
+      chrome.storage.local.get(['vigilLastProjectId', 'vigilAwaitingNewProject', 'vigilKnownProjectIds'], (res) => {
+        const awaiting = res.vigilAwaitingNewProject as boolean | undefined;
+        const knownIds = res.vigilKnownProjectIds as string[] | undefined;
+
+        if (awaiting && knownIds) {
+          // Find newly created project(s) — select the first new one
+          const newProject = list.find(p => !knownIds.includes(p.id));
+          if (newProject) {
+            setSelectedProjectId(newProject.id);
+            chrome.storage.local.set({ vigilLastProjectId: newProject.id });
+          }
+          // Clear the awaiting flag
+          chrome.storage.local.remove(['vigilAwaitingNewProject', 'vigilKnownProjectIds']);
+        } else {
+          // Normal flow — auto-select last used project
           const lastId = res.vigilLastProjectId as string | undefined;
           if (lastId && list.some(p => p.id === lastId)) {
             setSelectedProjectId(lastId);
           }
-        });
-      }
-    );
+        }
+      });
+    });
 
     // Count today's sessions for auto-name sequence
     import('@core/db').then(({ getSessionsForToday }) => {
@@ -149,8 +192,17 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
   };
 
   const openDashboardProjects = () => {
-    chrome.tabs.create({ url: `${DASHBOARD_URL}#projects` });
-    window.close();
+    chrome.tabs.create({ url: `${dashboardUrl}#projects` });
+  };
+
+  const openNewProject = () => {
+    // Save current project IDs so we can detect the new one when popup reopens
+    const knownIds = projects.map(p => p.id);
+    chrome.storage.local.set({
+      vigilAwaitingNewProject: true,
+      vigilKnownProjectIds: knownIds,
+    });
+    chrome.tabs.create({ url: `${dashboardUrl}#new-project` });
   };
 
   return (
@@ -182,7 +234,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
                 <p className="text-xs text-gray-500 mb-2">No projects yet</p>
                 <button
                   type="button"
-                  onClick={openDashboardProjects}
+                  onClick={openNewProject}
                   className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
                 >
                   Create your first project in the dashboard &rarr;
@@ -211,9 +263,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onBack, onCreated }) => {
               <button
                 type="button"
                 className="text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
-                onClick={openDashboardProjects}
+                onClick={openNewProject}
               >
-                New Project
+                + New Project
               </button>
               <span className="text-[10px] text-gray-700">|</span>
               <button

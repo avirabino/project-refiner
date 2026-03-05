@@ -13,10 +13,10 @@ import { ProjectList } from './views/ProjectList';
 type Tab = 'bugs' | 'features' | 'sessions' | 'projects';
 
 const TAB_CONFIG: { key: Tab; label: string; icon: string }[] = [
+  { key: 'projects', label: 'Projects', icon: '📁' },
   { key: 'sessions', label: 'Sessions', icon: '📹' },
   { key: 'bugs', label: 'Bugs', icon: '🐛' },
   { key: 'features', label: 'Features', icon: '✨' },
-  { key: 'projects', label: 'Projects', icon: '📁' },
 ];
 
 export default function App() {
@@ -24,7 +24,15 @@ export default function App() {
   const [sprints, setSprints] = useState<string[]>([]);
   const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [health, setHealth] = useState<HealthStatus>({ status: 'error' });
-  const [activeTab, setActiveTab] = useState<Tab>('sessions');
+  const [autoCreateProject, setAutoCreateProject] = useState(false);
+
+  // Derive initial tab + auto-create from URL hash (#new-project, #projects, #sessions, etc.)
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'new-project') return 'projects';
+    if (hash === 'sessions' || hash === 'bugs' || hash === 'features' || hash === 'projects') return hash;
+    return 'projects';
+  });
 
   // ── Bugs & Features state ─────────────────────────────────────────────────
   const [bugs, setBugs] = useState<BugItem[]>([]);
@@ -46,6 +54,16 @@ export default function App() {
   const [sessionDetail, setSessionDetail] = useState<SessionDetailType | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  // ── Hash routing (#new-project → auto-show create form) ──────────────────
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'new-project') {
+      setAutoCreateProject(true);
+      // Clear hash so refresh doesn't re-trigger
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   // ── Health polling ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -348,7 +366,12 @@ export default function App() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
               </div>
             ) : (
-              <ProjectList projects={projectItems} onRefresh={loadProjects} />
+              <ProjectList
+                projects={projectItems}
+                onRefresh={loadProjects}
+                autoCreate={autoCreateProject}
+                onAutoCreateConsumed={() => setAutoCreateProject(false)}
+              />
             )
           ) : null}
         </main>

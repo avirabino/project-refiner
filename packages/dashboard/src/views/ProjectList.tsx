@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ProjectItem } from '../types';
 import { createProject, updateProject, deleteProject } from '../api';
 
 interface ProjectListProps {
   projects: ProjectItem[];
   onRefresh: () => void;
+  /** Auto-show the create form on mount (e.g. from extension #new-project link) */
+  autoCreate?: boolean;
+  /** Called once autoCreate has been consumed so it doesn't re-trigger */
+  onAutoCreateConsumed?: () => void;
 }
 
 function slugify(name: string): string {
@@ -15,8 +19,16 @@ function slugify(name: string): string {
     .slice(0, 40);
 }
 
-export function ProjectList({ projects, onRefresh }: ProjectListProps) {
+export function ProjectList({ projects, onRefresh, autoCreate, onAutoCreateConsumed }: ProjectListProps) {
   const [showCreate, setShowCreate] = useState(false);
+
+  // Auto-show create form when navigated from extension "New Project" link
+  useEffect(() => {
+    if (autoCreate) {
+      setShowCreate(true);
+      onAutoCreateConsumed?.();
+    }
+  }, [autoCreate, onAutoCreateConsumed]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
