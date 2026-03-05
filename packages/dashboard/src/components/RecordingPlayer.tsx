@@ -75,6 +75,7 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
     const playerRef = useRef<any>(null);
     const [events, setEvents] = useState<RrwebEvent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const gotoFn = useCallback((timeOffset: number) => {
       if (playerRef.current?.goto) {
@@ -88,15 +89,17 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
     useEffect(() => {
       let cancelled = false;
       setLoading(true);
+      setError(null);
 
       flattenEventsAsync(recordings).then((evts) => {
         if (!cancelled) {
           setEvents(evts);
           setLoading(false);
         }
-      }).catch(() => {
+      }).catch((err) => {
         if (!cancelled) {
           setEvents([]);
+          setError(err instanceof Error ? err.message : 'Failed to decompress recording');
           setLoading(false);
         }
       });
@@ -166,8 +169,13 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
           data-testid="recording-player"
           className="bg-white rounded-xl border border-slate-200 p-8 text-center"
         >
-          <div className="text-3xl mb-2">🎥</div>
-          <div className="text-sm text-slate-500">No recording available</div>
+          <div className="text-3xl mb-2">{error ? '⚠️' : '🎥'}</div>
+          <div className="text-sm text-slate-500">
+            {error ? 'Failed to load recording' : 'No recording available'}
+          </div>
+          {error && (
+            <div className="text-xs text-red-400 mt-1 font-mono">{error}</div>
+          )}
         </div>
       );
     }
@@ -184,8 +192,7 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, RecordingPlayer
         </div>
         <div
           ref={containerRef}
-          className="p-3 flex justify-center overflow-hidden"
-          style={{ minHeight: height + 80 }}
+          className="p-3 flex justify-center overflow-hidden min-h-[560px]"
         />
       </div>
     );

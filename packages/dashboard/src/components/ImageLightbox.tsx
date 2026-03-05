@@ -106,11 +106,11 @@ export function ImageLightbox({ images, initialIndex, onClose }: ImageLightboxPr
       )}
 
       {/* Image + caption + counter */}
-      <div className="relative z-10 flex flex-col items-center max-w-[90vw] max-h-[90vh]">
+      <div className="relative z-10 flex flex-col items-center w-[90vw] max-h-[90vh]">
         <img
           src={image.src}
           alt={image.alt}
-          className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+          className="w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         />
 

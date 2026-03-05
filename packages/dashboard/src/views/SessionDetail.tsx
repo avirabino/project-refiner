@@ -199,7 +199,7 @@ export function SessionDetail({ session }: SessionDetailProps) {
             >
               <div className="text-3xl mb-2">🎥</div>
               <div className="text-sm text-slate-500">No recording for this session</div>
-              <div className="text-xs text-slate-400 mt-1">Start recording in the extension to capture DOM replay data.</div>
+              <div className="text-xs text-slate-400 mt-1">Recordings require the Chrome extension to be reloaded after updates. Create a new session to capture recordings.</div>
             </div>
           ) : null}
         </div>
@@ -286,11 +286,12 @@ export function SessionDetail({ session }: SessionDetailProps) {
                   <img
                     src={snap.screenshotDataUrl}
                     alt={`Snapshot at ${formatClock(snap.capturedAt)}`}
-                    className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    className="w-full aspect-video object-contain bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity duration-200"
+                    loading="lazy"
                     onClick={() => openLightbox(snap.screenshotDataUrl)}
                   />
                 ) : (
-                  <div className="w-full h-40 bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">
+                  <div className="w-full aspect-video bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">
                     📸
                   </div>
                 )}

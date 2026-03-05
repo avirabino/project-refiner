@@ -395,7 +395,7 @@ async function postWithRetry(session: VIGILSession, attempts = 3): Promise<void>
         body: JSON.stringify(liteSession),
       });
       if (res.ok) {
-        console.log(`[Vigil] POST success → session ${session.id} synced to ${serverUrl}`);
+        console.log(`[Vigil] POST success → session ${session.id} synced to ${serverUrl} (${liteSession.snapshots.length} snapshots, ${liteSession.recordings.length} recordings, ${liteSession.recordings[0]?.rrwebChunks.length ?? 0} chunks)`);
         notifyTab(vigilState.tabId, 'SESSION_SYNCED');
         return;
       }
@@ -548,31 +548,42 @@ export const vigilSessionManager = {
     vigilState.session.endedAt = now;
     vigilState.session.clock = now - vigilState.session.startedAt;
 
-    // Wait for the content script to flush its final recording chunk.
-    // STOP_RECORDING is sent asynchronously — the content script receives it,
-    // flushes the rrweb event buffer, and sends RECORDING_CHUNK back. Without
-    // this delay, getRecordingChunks() can run before the final chunk is written.
-    await new Promise((r) => setTimeout(r, 800));
-
     // Reconstruct recordings from IndexedDB (chunks are stored there by the
     // RECORDING_CHUNK handler but never added to the in-memory session).
     // Compress events via gzip to stay under Vercel's 4.5MB body limit.
+    //
+    // Instead of a fixed delay, poll IndexedDB for chunks (max 2s, check every 200ms).
+    // STOP_RECORDING is sent asynchronously — the content script flushes its
+    // rrweb event buffer and sends RECORDING_CHUNK back. Polling finds chunks
+    // as soon as they arrive, without over-waiting or under-waiting.
     const legacySessionId = legacyId ?? sessionManager.getActiveSessionId() ?? vigilState.session.id;
     const vigilSessionId = vigilState.session.id;
     try {
-      let [chunks, annotations] = await Promise.all([
-        getRecordingChunks(legacySessionId),
-        getAnnotationsBySession(legacySessionId),
-      ]);
-
-      // Fallback: try vigil session ID if no chunks found with legacy ID
-      // (handles case where recorder used vigil ID instead of legacy ID)
+      // Poll for recording chunks (max 2s, check every 200ms)
+      let chunks = await getRecordingChunks(legacySessionId);
       if (!chunks.length && legacySessionId !== vigilSessionId) {
-        console.log(`[Vigil] No chunks with legacy ID ${legacySessionId}, trying vigil ID ${vigilSessionId}`);
-        [chunks, annotations] = await Promise.all([
-          getRecordingChunks(vigilSessionId),
-          getAnnotationsBySession(vigilSessionId),
-        ]);
+        chunks = await getRecordingChunks(vigilSessionId);
+      }
+      const pollStart = Date.now();
+      while (chunks.length === 0 && Date.now() - pollStart < 2000) {
+        await new Promise((r) => setTimeout(r, 200));
+        chunks = await getRecordingChunks(legacySessionId);
+        if (!chunks.length && legacySessionId !== vigilSessionId) {
+          chunks = await getRecordingChunks(vigilSessionId);
+        }
+      }
+
+      // Fetch annotations alongside
+      let annotations = await getAnnotationsBySession(legacySessionId);
+      if (annotations.length === 0 && legacySessionId !== vigilSessionId) {
+        annotations = await getAnnotationsBySession(vigilSessionId);
+      }
+
+      if (chunks.length === 0) {
+        console.warn(`[Vigil] No recording chunks found after ${Date.now() - pollStart}ms polling.`);
+        console.warn(`[Vigil]   Legacy ID: ${legacySessionId}`);
+        console.warn(`[Vigil]   Vigil ID: ${vigilSessionId}`);
+        console.warn(`[Vigil]   In-memory recordings: ${vigilState.session.recordings.length}`);
       }
 
       if (chunks.length > 0) {
