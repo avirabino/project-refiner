@@ -198,7 +198,7 @@ const SessionDetail: React.FC<SessionDetailProps> = ({ sessionId, onBack }) => {
         const url = URL.createObjectURL(blob);
         const date = new Date(session.startedAt).toISOString().split('T')[0];
         const slug = session.name.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-        const filename = `refine-${slug}-${date}.zip`;
+        const filename = `vigil-${slug}-${date}.zip`;
         await new Promise<void>((resolve, reject) => {
           chrome.downloads.download({ url, filename, saveAs: true, conflictAction: 'overwrite' }, (id) => {
             URL.revokeObjectURL(url);

@@ -96,7 +96,7 @@ export async function generateReplayHtml(session: Session, chunks: RecordingChun
 </head>
 <body>
   <header>
-    <h1>⬡ Refine Replay — ${escapeHtml(session.name)}</h1>
+    <h1>⬡ Vigil Replay — ${escapeHtml(session.name)}</h1>
     <div class="meta">
       <span>Started: ${new Date(session.startedAt).toLocaleString()}</span>
       <span>Duration: ${formatDuration(session.duration)}</span>
@@ -119,7 +119,13 @@ export async function generateReplayHtml(session: Session, chunks: RecordingChun
       document.getElementById('no-events').style.display = 'block';
     } else {
       try {
-        const player = new rrwebPlayer({
+        // The UMD exports { default: Player, Player } — resolve the constructor
+        var PlayerCtor = (typeof rrwebPlayer === 'function')
+          ? rrwebPlayer
+          : (rrwebPlayer.default || rrwebPlayer.Player);
+        if (!PlayerCtor) throw new Error('Could not resolve rrweb-player constructor');
+
+        var player = new PlayerCtor({
           target: document.getElementById('player'),
           props: {
             events: events,
@@ -130,7 +136,7 @@ export async function generateReplayHtml(session: Session, chunks: RecordingChun
             speedOption: [1, 2, 4, 8],
           },
         });
-        window.addEventListener('resize', () => {
+        window.addEventListener('resize', function() {
           player.$set({
             width: Math.min(window.innerWidth - 48, 1280),
             height: Math.min(window.innerHeight - 120, 720),

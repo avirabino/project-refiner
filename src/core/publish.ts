@@ -25,7 +25,7 @@ function toRelativeDownloadPath(p: string): string {
   rel = rel.replace(/\/+$/, '');            // strip trailing slashes
   // Remove any '..' segments to prevent path traversal
   rel = rel.split('/').filter(seg => seg !== '..' && seg !== '.').join('/');
-  return rel || 'refine-exports';
+  return rel || 'vigil-exports';
 }
 
 export async function publishSession(

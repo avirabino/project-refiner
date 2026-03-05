@@ -137,7 +137,7 @@ describe('Export Pipeline Integration', () => {
     expect(html).toContain('<!DOCTYPE html>');
     // The playerJs/playerCss imports resolve to undefined in Vitest Node environment
     // due to the ?raw query param, so we just check for the player init code
-    expect(html).toContain('new rrwebPlayer({');
+    expect(html).toContain('new PlayerCtor({');
     expect(html).toContain(session.name);
   });
 

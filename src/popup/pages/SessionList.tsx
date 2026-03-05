@@ -206,7 +206,7 @@ const SessionList: React.FC<SessionListProps> = ({ onNewSession, onSelectSession
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
         <div className="flex items-center gap-2">
           <span className="text-blue-500 text-lg">⬡</span>
-          <span className="text-sm font-bold text-white">Refine</span>
+          <span className="text-sm font-bold text-white">Vigil</span>
         </div>
         <button
           onClick={onNewSession}
