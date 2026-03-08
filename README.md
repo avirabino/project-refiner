@@ -47,7 +47,7 @@ All projects are migrating to Google Cloud services (Gemini, Cloud Run, Vertex A
 | Showroom | Text-to-Speech, Veo | Q2-Q3 2026 |
 
 
-## Synaptix Token Economy (Active)
+## Synaptix Credits Economy (SXC) (Active)
 
 Unified billing unit across all SynaptixLabs products. KeyVault manages API keys,
 vendor credentials, BYOK, and usage tracking from a shared Neon PostgreSQL schema.
@@ -56,9 +56,9 @@ vendor credentials, BYOK, and usage tracking from a shared Neon PostgreSQL schem
 
 | Layer | What | Status |
 |-------|------|--------|
-| Synaptix Tokens (ST) | Universal billing unit ($0.001 × 1.3x markup) | ✅ Implemented in AGENTS |
+| Synaptix Credits (SXC) | Universal billing unit ($0.001 × 1.3x markup) | ✅ Implemented in AGENTS |
 | KeyVault | Shared DB for keys, users, apps, vendor credentials | 📋 Sprint 10a |
-| BYOK | Users bring own vendor API keys (no ST charge) | 📋 Sprint 11 |
+| BYOK | Users bring own vendor API keys (no SXC charge) | 📋 Sprint 11 |
 | Website portal | Dashboard, key mgmt, billing UI at synaptixlabs.ai | 📋 Sprint 12 |
 | Railway → Cloud Run | All backends migrate to GCP (covered by credits) | 📋 Sprint 12 |
 
