@@ -91,7 +91,33 @@ NEVER mark DONE without:
 
 ---
 
-## 5. AGENTS.md Layering
+## 5. Module Reuse Mandate
+
+Every SynaptixLabs project has shared infrastructure. Before building anything new:
+
+### The Rule
+**CHECK BEFORE YOU BUILD.** If a module provides what you need → USE IT. If close → EXTEND IT. Only build new if nothing exists.
+
+### Required Reading Per Project
+Each project maintains its own reuse documentation. Before writing code in any project:
+1. Read the project's **module contracts** doc (typically `docs/03_MODULE_CONTRACTS.md` or equivalent)
+2. Read the project's **module index** (lists all modules with purpose and README status)
+3. Read the **README of any module** you're about to touch or integrate with
+
+### Enforcement
+- Design reviews (GBU) MUST include a module reuse checklist
+- New modules MUST have a README and register in the project's module contracts doc
+- Code that reinvents existing module capabilities will be rejected in review
+- Sprint kickoffs MUST reference the project's reuse documentation in the dev team reading order
+
+### Cross-Project Reuse
+- **AGENTS (nightingale) is the platform.** All products route through it.
+- Do NOT re-invent platform capabilities in product repos.
+- If a capability should be shared, propose extracting it to `_platform/synaptix-sdk` or to the AGENTS platform.
+
+---
+
+## 6. AGENTS.md Layering
 
 ```
 projects/AGENTS.md              ← Tier-1 (this file, workspace-wide)
@@ -104,7 +130,7 @@ More specific layers **override and extend** parent layers.
 
 ---
 
-## 6. What NOT to Do
+## 7. What NOT to Do
 
 - Do NOT fork/duplicate nightingale/AGENTS — extend it
 - Do NOT introduce infra dependencies without FLAG

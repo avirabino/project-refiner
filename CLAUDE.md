@@ -6,7 +6,8 @@
 Read in order:
 1. This file (done)
 2. `CODEX.md` — workspace state, project registry, conventions
-3. `AGENTS.md` — global agent constitution and role definitions
+3. `AGENTS.md` — global agent constitution, role definitions, **module reuse mandate (§5)**
+4. The target project's own module contracts + reuse docs (see project README)
 
 **Default role:** `[CTO]`
 **Operator:** Avi ([FOUNDER]) — final decision maker on all scope/priority/tradeoffs
@@ -15,6 +16,7 @@ Read in order:
 - `./Papyrus` — Next.js publishing platform (Sprint 10)
 - `./nightingale` — Agents platform (Sprint 05)
 - `./vigil` — Bug Discovery & Resolution Platform (Sprint 06 🟢 ACTIVE)
+- `./BudoAI` — AI martial arts learning platform (Sprint 00 🟢 ACTIVE)
 - `./_platform/synaptix-sdk` — Shared infrastructure library
 - `./_platform/synaptix-scaffold` — Project template
 
