@@ -1,80 +1,100 @@
-# SynaptixLabs Workspace
+# SynaptixLabs — Projects
 
 > Workspace-level repository for SynaptixLabs projects.
 > Each project in this folder has its own git repository.
+> Primary dev tool: **Claude Code CLI** (`claude` from any repo root).
+> Platform: **AGENTS** (Nightingale) — all products authenticate through AGENTS.
 
-## What this repo tracks
-
-This is the **workspace operating system** — it contains shared conventions, agent configurations, and the project registry. It does NOT contain project code (each project is an independent git repo).
+---
 
 ## Project Registry
 
-| Project | Status | Purpose |
-|---|---|---|
-| [Papyrus](./Papyrus) | 🟢 Active | AI-powered academic publishing platform |
-| [project-refiner](./project-refiner) | 🟡 Paused | Chrome extension for acceptance test recording |
-| [happyseniors](./happyseniors) | 🟢 Active | Client workspace — HappySeniors platform |
-| [nightingale](./nightingale) | 🟢 Active | SynaptixLabs Agents platform |
-| [_platform/synaptix-sdk](./_platform/synaptix-sdk) | 🔧 Platform | Shared infrastructure packages |
-| [_platform/synaptix-scaffold](./_platform/synaptix-scaffold) | 📐 Template | Project creation scaffold |
-| [_platform/youtube-api](./_platform/youtube-api) | 🔧 Tool | Shared YouTube utility |
-| [website](./website) | 🟡 Active | SynaptixLabs marketing site |
+| Project | Path | Stack | Sprint | Status |
+|---------|------|-------|--------|--------|
+| **AGENTS** (Nightingale) | `agents/` | Python FastAPI + React/Vite + GCP | 10c2 | 🟢 Platform core |
+| **Papyrus** | `Papyrus/` | Next.js 14 + Prisma + Neon PG | 09→10 | 🟢 Article wizard |
+| **Budō AI** | `BudoAI/` | Next.js 14 + FastAPI + Babylon.js + GCP | 01 | 🟡 PoC coding |
+| **HappySeniors** | `happyseniors/` | Next.js 15 + React 19 + Canvas2D | 7+ | 🟡 Maintenance |
+| **Showroom** | `Showroom/` | TypeScript CLI + Playwright + TTS | — | 🟡 Prototyping |
+| **AIcademy** | `AIcademy/` | — | — | 🔵 Planned |
+| **Arcane Vault** | `memory-game-demo/` | React single-file + Arcane UI Kit | 05→06 | 🔵 Planned (3D Maze) |
+| **Vigil** | `vigil/` | — | — | 🔵 Planned |
 
-## About SynaptixLabs
+### Platform & Infrastructure
 
-SynaptixLabs is a product-led AI startup building agentic AI systems, platforms, and tools.
+| Repo | Path | Purpose |
+|------|------|---------|
+| **synaptix-scaffold** | `_platform/synaptix-scaffold/` | Template for all projects — `.claude/commands/`, AGENTS.md tiers, docs, start scripts |
+| **synaptix-infra** | `_platform/` | Shared infra libraries (extraction-first from AGENTS) |
+| **website** | `website/` | SynaptixLabs marketing site |
 
-- **Website:** https://synaptixlabs.ai
-- **Products:** Papyrus, Nightingale Agents
+---
 
-## Internal Documentation
+## Dev Workflow (Claude Code CLI)
 
-See [CODEX.md](./CODEX.md) for internal workspace handbook (dev team + AI agents).
+### Start a project
+```powershell
+cd C:\Synaptix-Labs\projects\agents   # or Papyrus, BudoAI, etc.
+.\start.ps1                            # Start backend + frontend
+.\start.ps1 -Stop                      # Stop all processes
+```
 
+### Orient as CPTO
+```
+claude
+> /project:cpto
+```
 
-## GCP Migration (Active)
+### Slash commands (scaffold-level, shared across projects)
 
-SynaptixLabs has $25K in Google Cloud credits (GFS Ecosystem Partner, valid through Feb 2028).
-All projects are migrating to Google Cloud services (Gemini, Cloud Run, Vertex AI).
+| Command | Purpose |
+|---------|---------|
+| `/project:cpto` | Orient as CPTO, read sprint state, assign work |
+| `/project:dev-frontend` | Activate FE dev agent |
+| `/project:dev-backend` | Activate BE dev agent |
+| `/project:dev-qa` | Activate QA agent |
+| `/project:dev-devops` | Activate DevOps agent (infra, CI/CD, start scripts) |
+| `/project:plan` | Sprint planning mode |
+| `/project:test` | Run unit tests |
+| `/project:e2e` | Run Playwright E2E tests |
+| `/project:regression` | Full regression suite |
+| `/project:design-review` | DR mode for architecture changes |
+| `/project:sprint-report` | Generate sprint report |
+| `/project:release-gate` | Release readiness check |
 
-**Migration plan:** See [`agents/project_management/docs/19_GCP_MIGRATION_PLAN.md`](./agents/project_management/docs/19_GCP_MIGRATION_PLAN.md)
+---
 
-| Project | Primary GCP Services | Phase |
-|---------|---------------------|-------|
-| AGENTS (Nightingale) | Gemini 3.1 Pro, Flash, Cloud Run, Vertex Embeddings | Active (Sprint 10a) |
-| Papyrus | Cloud Run, Gemini Flash Image, Translation | Q2 2026 |
-| HappySeniors | Speech-to-Text, Text-to-Speech, Maps | Q2-Q3 2026 |
-| Showroom | Text-to-Speech, Veo | Q2-Q3 2026 |
+## Conventions
 
+- **Vibes** (1 Vibe = 1K tokens) — never days or story points
+- **GBU reviews** (Good/Bad/Ugly) — standard for all PRDs, DRs, code reviews
+- **Reuse-first** — check `03_MODULES.md` before building new capabilities
+- **AGENTS platform** is shared infrastructure — products don't hold their own vendor API keys
+- **Start scripts** — every project has `start.ps1` + `start.sh` with process mgmt, health checks, build stamps
 
-## Synaptix Credits Economy (SXC) (Active)
+## GCP Infrastructure
 
-Unified billing unit across all SynaptixLabs products. KeyVault manages API keys,
-vendor credentials, BYOK, and usage tracking from a shared Neon PostgreSQL schema.
+| Service | Provider | Project |
+|---------|----------|---------|
+| Compute | GCP Cloud Run | `agents` (ID: `level-scheme-489616-d7`) |
+| Database | GCP Cloud SQL (PostgreSQL) | Same project |
+| Auth | Firebase Auth | Same project |
+| LLM (primary) | Vertex AI / Gemini | Same project |
+| Credits | $25K GFS Ecosystem Partner (through Feb 2028) | Same billing |
 
-**Spec:** See [`agents/project_management/docs/20_TOKEN_KEY_INFRASTRUCTURE.md`](./agents/project_management/docs/20_TOKEN_KEY_INFRASTRUCTURE.md)
+**One GCP project (`agents`) serves all products via the AGENTS platform.**
 
-| Layer | What | Status |
-|-------|------|--------|
-| Synaptix Credits (SXC) | Universal billing unit ($0.001 × 1.3x markup) | ✅ Implemented in AGENTS |
-| KeyVault | Shared DB for keys, users, apps, vendor credentials | 📋 Sprint 10a |
-| BYOK | Users bring own vendor API keys (no SXC charge) | 📋 Sprint 11 |
-| Website portal | Dashboard, key mgmt, billing UI at synaptixlabs.ai | 📋 Sprint 12 |
-| Railway → Cloud Run | All backends migrate to GCP (covered by credits) | 📋 Sprint 12 |
+## Synaptix Credits (SXC)
 
+Unified billing unit across all SynaptixLabs products ($0.001 × 1.3x markup).
+See `agents/project_management/docs/20_TOKEN_KEY_INFRASTRUCTURE.md`.
 
-## Platform Consolidation (Active — March 2026)
+## Internal Docs
 
-**All SynaptixLabs products are becoming AGENTS platform customers.**
-No product calls LLM providers directly — every LLM interaction routes through Nightingale AGENTS.
+- [CODEX.md](./CODEX.md) — Workspace handbook
+- [CLAUDE.md](./CLAUDE.md) — Claude Code guidance
+- [AGENTS.md](./AGENTS.md) — Agent constitution (Tier-1)
 
-**Full plan:** See [`agents/project_management/docs/21_PLATFORM_CONSOLIDATION.md`](./agents/project_management/docs/21_PLATFORM_CONSOLIDATION.md)
+---
 
-| Phase | What | Timeline |
-|-------|------|----------|
-| 0 | Consolidate all Google API keys to SynaptixLabs GCP ($25K credits) | NOW |
-| 1 | KeyVault core in AGENTS (key mgmt, auto-provisioning) | Sprint 10a (Mar) |
-| 2 | First customer: HappySeniors migrates to AGENTS API | Sprint 11 (Apr) |
-| 3 | Vigil + Showroom migrate | Sprint 11-12 (Apr-May) |
-| 4 | Website token portal (dashboard, BYOK, billing UI) | Sprint 12 (May) |
-| 5 | Railway/Vercel → Cloud Run (all services) | Sprint 12 (May) |
+*Last updated: 2026-03-16*
