@@ -159,6 +159,21 @@ projectsRouter.post('/', async (req, res) => {
     // Check for duplicate
     const existing = await getStorage().getProject(id);
     if (existing) {
+      // If archived, restore and update instead of rejecting
+      if (existing.archivedAt) {
+        await getStorage().restoreProject(id);
+        const updates: Record<string, string> = {};
+        if (name) updates.name = name;
+        if (description) updates.description = description;
+        if (currentSprint) updates.currentSprint = currentSprint;
+        if (url) updates.url = url;
+        if (Object.keys(updates).length > 0) {
+          await getStorage().updateProject(id, updates);
+        }
+        const restored = await getStorage().getProject(id);
+        res.status(200).json({ project: restored, restored: true });
+        return;
+      }
       res.status(409).json({ error: `Project '${id}' already exists` });
       return;
     }
