@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { loadConfig } from './config.js';
 import { sessionRouter } from './routes/session.js';
 import { sessionsRouter } from './routes/sessions.js';
@@ -16,6 +17,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export { initStorage } from './storage/index.js';
+
+// Read version from package.json at startup (single read, not per-request)
+const serverPkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8')) as { version: string };
+const APP_VERSION = serverPkg.version;
 
 const config = loadConfig();
 const app = express();
@@ -44,7 +49,7 @@ app.get('/health', (_req, res) => {
 
   res.json({
     status: 'ok',
-    version: '2.0.0',
+    version: APP_VERSION,
     storage: storageName,
     llmMode: config.llmMode,
     port: config.serverPort,
