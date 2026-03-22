@@ -39,7 +39,6 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
   const [totalPaused, setTotalPaused] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [showBugEditor, setShowBugEditor] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSizeWarning, setShowSizeWarning] = useState(false);
   const sizeWarningFiredRef = useRef(false);
   const [lastClickedSelector, setLastClickedSelector] = useState<string | undefined>(undefined);
@@ -205,15 +204,6 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
     });
     // Unmount overlay immediately — don't block on background response
     // (background may await vigilSessionManager.endSession → postWithRetry which can take 6s+)
-    onStop?.();
-  };
-
-  const handleCancel = () => {
-    stopRecording();
-    safeSendMessage({ type: MessageType.CANCEL_SESSION, source: 'content' }, () => {
-      showToast('Session cancelled');
-    });
-    setShowCancelConfirm(false);
     onStop?.();
   };
 
@@ -494,40 +484,7 @@ const ControlBar: React.FC<ControlBarProps> = ({ sessionId, sessionName, onStop 
           ◀
         </button>
 
-        <button
-          className="refine-btn refine-btn--discard"
-          title="Cancel session (discard)"
-          aria-label="Cancel session"
-          data-testid="btn-cancel-session"
-          tabIndex={0}
-          onClick={() => setShowCancelConfirm(true)}
-        >
-          ✕
-        </button>
       </div>
-
-      {showCancelConfirm && (
-        <div className="refine-cancel-confirm" role="alertdialog" aria-modal="true" aria-labelledby="refine-cancel-title">
-          <p id="refine-cancel-title" className="refine-cancel-confirm__title">Cancel session?</p>
-          <p className="refine-cancel-confirm__body">This will discard all recordings, screenshots, and bugs from this session. This cannot be undone.</p>
-          <div className="refine-cancel-confirm__actions">
-            <button
-              className="refine-btn--cancel"
-              data-testid="cancel-session-no"
-              onClick={() => setShowCancelConfirm(false)}
-            >
-              Keep recording
-            </button>
-            <button
-              className="refine-btn--danger-solid"
-              data-testid="cancel-session-yes"
-              onClick={handleCancel}
-            >
-              Discard session
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 };
