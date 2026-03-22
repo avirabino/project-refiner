@@ -489,10 +489,17 @@ function createCommentPin(
     if (interact.mode !== 'idle') return; // Don't show tooltip while dragging
     const text = ann.commentText || (ann.commentEntityType === 'bug' ? '🐛 Bug' : '✨ Feature');
     tooltipEl = document.createElementNS(SVG_NS, 'foreignObject');
-    tooltipEl.setAttribute('x', String(x - 100));
-    tooltipEl.setAttribute('y', String(y - 50));
-    tooltipEl.setAttribute('width', '200');
-    tooltipEl.setAttribute('height', '40');
+    // Clamp tooltip inside viewport
+    const ttW = 200, ttH = 40, ttMargin = 8;
+    let ttX = x - ttW / 2;
+    let ttY = y - ttH - 16; // above the pin
+    if (ttX < ttMargin) ttX = ttMargin;
+    if (ttX + ttW > window.innerWidth - ttMargin) ttX = window.innerWidth - ttW - ttMargin;
+    if (ttY < ttMargin) ttY = y + 24; // below the pin if clipping top
+    tooltipEl.setAttribute('x', String(ttX));
+    tooltipEl.setAttribute('y', String(ttY));
+    tooltipEl.setAttribute('width', String(ttW));
+    tooltipEl.setAttribute('height', String(ttH));
     tooltipEl.style.cssText = 'pointer-events: none; overflow: visible;';
 
     const div = document.createElement('div');

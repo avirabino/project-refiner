@@ -7,7 +7,7 @@
  * Appears near the clicked position (inside Shadow DOM).
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageType, BugPriority, FeatureType } from '@shared/types';
 import type { Annotation } from '@shared/types';
 import { generateBugId, generateFeatureId } from '@shared/utils';
@@ -175,24 +175,71 @@ const AnnotationCommentEditor: React.FC<CommentEditorProps> = ({ sessionId, onCl
     onClose();
   };
 
-  // Compute editor position near the pin
+  // ── Draggable editor position ─────────────────────────────────────────────
+  const MARGIN = 12;
+  const EDITOR_W = 320;
+  const EDITOR_H = 380; // approximate height
+
+  const [editorPos, setEditorPos] = useState<{ left: number; top: number } | null>(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
+
+  // Clamp position inside viewport with margins
+  const clamp = useCallback((left: number, top: number) => ({
+    left: Math.max(MARGIN, Math.min(left, window.innerWidth - EDITOR_W - MARGIN)),
+    top: Math.max(MARGIN, Math.min(top, window.innerHeight - EDITOR_H - MARGIN)),
+  }), []);
+
+  // Compute initial position when pin is placed
+  useEffect(() => {
+    if (!pinPosition) {
+      setEditorPos(null);
+      return;
+    }
+    // Position to the right of pin, or left if near right edge
+    const rightSpace = window.innerWidth - pinPosition.x;
+    let left: number;
+    if (rightSpace > EDITOR_W + 30) {
+      left = pinPosition.x + 20;
+    } else {
+      left = pinPosition.x - EDITOR_W - 20;
+    }
+    const top = pinPosition.y - 100;
+    setEditorPos(clamp(left, top));
+  }, [pinPosition, clamp]);
+
+  // Drag handlers
+  const onDragStart = useCallback((e: React.MouseEvent) => {
+    if (!editorPos) return;
+    e.preventDefault();
+    isDragging.current = true;
+    dragStart.current = { mx: e.clientX, my: e.clientY, ox: editorPos.left, oy: editorPos.top };
+
+    const onMove = (me: MouseEvent) => {
+      if (!isDragging.current) return;
+      const nx = dragStart.current.ox + (me.clientX - dragStart.current.mx);
+      const ny = dragStart.current.oy + (me.clientY - dragStart.current.my);
+      setEditorPos(clamp(nx, ny));
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [editorPos, clamp]);
+
+  // Build style
   const editorStyle: React.CSSProperties = {
     position: 'fixed',
     zIndex: 2147483647,
     pointerEvents: 'auto',
   };
 
-  if (pinPosition) {
-    // Position to the right of the pin, or left if near right edge
-    const rightSpace = window.innerWidth - pinPosition.x;
-    if (rightSpace > 340) {
-      editorStyle.left = `${pinPosition.x + 20}px`;
-    } else {
-      editorStyle.left = `${pinPosition.x - 340}px`;
-    }
-    // Vertically center on pin
-    const topPos = Math.max(10, Math.min(pinPosition.y - 100, window.innerHeight - 340));
-    editorStyle.top = `${topPos}px`;
+  if (editorPos) {
+    editorStyle.left = `${editorPos.left}px`;
+    editorStyle.top = `${editorPos.top}px`;
   } else {
     // Waiting for click — center on screen
     editorStyle.left = '50%';
@@ -227,7 +274,12 @@ const AnnotationCommentEditor: React.FC<CommentEditorProps> = ({ sessionId, onCl
 
   return (
     <div ref={editorRef} className="refine-bug-editor" style={{ ...editorStyle, width: '320px' }}>
-      <h3>{editAnnotation ? '✏️ Edit Comment' : (entryType === 'bug' ? '🐛 Comment Bug' : '✨ Comment Feature')}</h3>
+      <h3
+        style={{ cursor: 'grab', userSelect: 'none' }}
+        onMouseDown={onDragStart}
+      >
+        {editAnnotation ? '✏️ Edit Comment' : (entryType === 'bug' ? '🐛 Comment Bug' : '✨ Comment Feature')}
+      </h3>
 
       <div className="refine-type-toggle">
         <button
