@@ -42,6 +42,23 @@ export function mountOverlay(sessionId: string, options: OverlayOptions = {}): v
   hostElement.id = 'refine-root';
   hostElement.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; pointer-events: none;';
 
+  // GOD MODE: Stop ALL mouse/pointer/keyboard events from propagating to the
+  // host page. Without this, clicks on Vigil UI (bug editor, annotations)
+  // bubble through #refine-root to the page, triggering "click outside"
+  // listeners that close the app's popups/modals.
+  const stopPropagation = (e: Event) => e.stopPropagation();
+  for (const eventType of [
+    'click', 'dblclick', 'mousedown', 'mouseup', 'mouseover', 'mouseout',
+    'pointerdown', 'pointerup', 'pointerover', 'pointerout',
+    'touchstart', 'touchend', 'touchmove',
+    'keydown', 'keyup', 'keypress',
+    'focusin', 'focusout', 'focus', 'blur',
+    'input', 'change',
+    'contextmenu', 'wheel',
+  ]) {
+    hostElement.addEventListener(eventType, stopPropagation, true);
+  }
+
   const shadow = hostElement.attachShadow({ mode: 'open' });
 
   // Inject scoped styles into Shadow DOM

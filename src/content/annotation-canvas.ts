@@ -29,6 +29,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const CANVAS_ID = 'vigil-annotation-canvas';
 const CANVAS_Z = '2147483646'; // one below #refine-root
 
+/** GOD MODE: Prevent Vigil interactions from reaching the host app. */
+function stopPropagationHandler(e: Event): void { e.stopPropagation(); }
+
 let svgCanvas: SVGSVGElement | null = null;
 
 // ── Drawing state ─────────────────────────────────────────────────────────────
@@ -153,6 +156,14 @@ function enableDrawMode(_tool: AnnotationTool): void {
   svgCanvas.addEventListener('mousedown', onMouseDown);
   svgCanvas.addEventListener('mousemove', onMouseMove);
   svgCanvas.addEventListener('mouseup', onMouseUp);
+
+  // GOD MODE: Stop events from reaching the host app during annotation draw mode.
+  // Without this, clicks on the canvas propagate to the page and close its popups.
+  svgCanvas.addEventListener('click', stopPropagationHandler, true);
+  svgCanvas.addEventListener('mousedown', stopPropagationHandler, true);
+  svgCanvas.addEventListener('mouseup', stopPropagationHandler, true);
+  svgCanvas.addEventListener('pointerdown', stopPropagationHandler, true);
+  svgCanvas.addEventListener('pointerup', stopPropagationHandler, true);
 }
 
 function disableDrawMode(): void {
@@ -163,6 +174,11 @@ function disableDrawMode(): void {
   svgCanvas.removeEventListener('mousedown', onMouseDown);
   svgCanvas.removeEventListener('mousemove', onMouseMove);
   svgCanvas.removeEventListener('mouseup', onMouseUp);
+  svgCanvas.removeEventListener('click', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('mousedown', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('mouseup', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('pointerdown', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('pointerup', stopPropagationHandler, true);
 
   // Clean up preview
   if (draw.previewEl) {
@@ -186,6 +202,11 @@ function enableCommentMode(): void {
   svgCanvas.removeEventListener('mousedown', onMouseDown);
   svgCanvas.removeEventListener('mousemove', onMouseMove);
   svgCanvas.removeEventListener('mouseup', onMouseUp);
+
+  // GOD MODE: Stop events from reaching the host app during comment mode
+  svgCanvas.addEventListener('click', stopPropagationHandler, true);
+  svgCanvas.addEventListener('mousedown', stopPropagationHandler, true);
+  svgCanvas.addEventListener('pointerdown', stopPropagationHandler, true);
 }
 
 function disableCommentMode(): void {
@@ -195,6 +216,10 @@ function disableCommentMode(): void {
     svgCanvas.style.pointerEvents = 'none';
     svgCanvas.style.cursor = 'default';
   }
+  // GOD MODE: Remove propagation blockers
+  svgCanvas.removeEventListener('click', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('mousedown', stopPropagationHandler, true);
+  svgCanvas.removeEventListener('pointerdown', stopPropagationHandler, true);
 }
 
 // ── Mouse handlers ────────────────────────────────────────────────────────────
