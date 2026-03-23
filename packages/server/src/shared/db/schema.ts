@@ -6,6 +6,7 @@
  * No schema definitions elsewhere. (S09-ARCH-01 Section 4)
  *
  * Sprint 09: Auth tables (users, email_verification, revoked_tokens)
+ * Sprint 09: Billing tables (token_transactions, promo_codes, promo_code_redemptions)
  */
 
 // ============================================================================
@@ -185,11 +186,6 @@ export interface EmailVerificationRow {
 }
 
 /**
- * Revoked tokens (deny list).
- * Stores SHA-256 hash of revoked refresh tokens.
- * TTL = token expiry for automatic cleanup.
- */
-/**
  * Active refresh tokens.
  * Stores SHA-256 hash of refresh tokens for validation + rotation.
  */
@@ -206,6 +202,11 @@ export interface RefreshTokenRow {
   created_at: Date;
 }
 
+/**
+ * Revoked tokens (deny list).
+ * Stores SHA-256 hash of revoked refresh tokens.
+ * TTL = token expiry for automatic cleanup.
+ */
 export interface RevokedTokenRow {
   /** Primary key — UUID. */
   id: string;
@@ -215,4 +216,78 @@ export interface RevokedTokenRow {
   expires_at: Date;
   /** When the token was revoked. */
   created_at: Date;
+}
+
+// ============================================================================
+// Sprint 09: Billing tables (Track C)
+// ============================================================================
+
+/** Token transaction action types. */
+export type TokenActionType =
+  | 'consumption'
+  | 'plan_renewal'
+  | 'subscription_created'
+  | 'subscription_updated'
+  | 'subscription_canceled'
+  | 'subscription_past_due'
+  | 'token_pack_purchase'
+  | 'promo_redemption'
+  | string; // Allow custom action types
+
+/**
+ * Token transactions audit log.
+ * Records every SXC credit/debit for full audit trail.
+ */
+export interface TokenTransactionRow {
+  /** Primary key — UUID. */
+  id: string;
+  /** FK to users.id. */
+  user_id: string;
+  /** Action that triggered this transaction. */
+  action_type: string;
+  /** Amount: positive = credit, negative = debit. */
+  amount: number;
+  /** Balance AFTER this transaction. */
+  balance: number;
+  /** Optional linked article/entity ID. */
+  article_id: string | null;
+  /** Flexible metadata (JSONB). */
+  metadata: Record<string, unknown> | null;
+  /** When the transaction occurred. */
+  created_at: Date;
+}
+
+/**
+ * Promo codes.
+ */
+export interface PromoCodeRow {
+  /** Primary key — UUID. */
+  id: string;
+  /** Unique promo code string. */
+  code: string;
+  /** Number of tokens awarded on redemption. */
+  token_amount: number;
+  /** Maximum number of times this code can be used (null = unlimited). */
+  max_uses: number | null;
+  /** How many times the code has been redeemed. */
+  used_count: number;
+  /** When the code expires (null = never). */
+  expires_at: Date | null;
+  /** When the code was created. */
+  created_at: Date;
+}
+
+/**
+ * Promo code redemptions — tracks who redeemed what.
+ * Unique constraint: (user_id, promo_code_id) — one redemption per user per code.
+ */
+export interface PromoCodeRedemptionRow {
+  /** Primary key — UUID. */
+  id: string;
+  /** FK to users.id. */
+  user_id: string;
+  /** FK to promo_codes.id. */
+  promo_code_id: string;
+  /** When the code was redeemed. */
+  redeemed_at: Date;
 }

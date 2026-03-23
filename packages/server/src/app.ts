@@ -12,6 +12,8 @@ import { sprintsRouter } from './routes/sprints.js';
 import { suggestRouter } from './routes/suggest.js';
 import { projectsRouter } from './routes/projects.js';
 import { getStorage } from './storage/index.js';
+import { authMiddleware } from './modules/auth/index.js';
+import { billingRouter, subscriptionRouter, webhookRouter, redeemPromoHandler } from './modules/billing/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,6 +66,13 @@ app.use('/api/features', featuresRouter);
 app.use('/api/sprints', sprintsRouter);
 app.use('/api/vigil', suggestRouter);
 app.use('/api/projects', projectsRouter);
+
+// Billing routes (Sprint 09 — Track C)
+app.use('/api/billing', billingRouter);
+app.use('/api/subscription', subscriptionRouter);
+app.use('/api/webhooks', webhookRouter);
+// Promo code redemption on auth path (spec: POST /api/auth/redeem-promo)
+app.post('/api/auth/redeem-promo', authMiddleware, redeemPromoHandler);
 
 // Admin: clean orphaned bugs/features
 app.post('/api/admin/clean-orphans', async (_req, res) => {
