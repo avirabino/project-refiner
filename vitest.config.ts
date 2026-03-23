@@ -15,7 +15,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     reporters: 'dot',
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts', 'packages/server/src/modules/**/tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
