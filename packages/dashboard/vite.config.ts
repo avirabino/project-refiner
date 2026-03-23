@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/dashboard/',
+  base: '/',
   resolve: {
     alias: {
       '@synaptix/vigil-shared': resolve(__dirname, '../shared/src'),

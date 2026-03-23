@@ -108,17 +108,19 @@ app.post('/api/admin/backfill', async (_req, res) => {
 
 // Serve dashboard static files — resolve from compiled dist/ up to public/
 const dashboardDir = resolve(__dirname, '..', 'public');
-app.use('/dashboard', express.static(dashboardDir, { index: 'index.html' }));
-// SPA fallback — serve index.html for /dashboard and /dashboard/* routes
-app.get('/dashboard', (_req, res) => {
+app.use(express.static(dashboardDir, { index: false }));
+
+// SPA fallback — serve index.html for all non-API GET routes
+// Handles: /, /auth/*, /dashboard/*, /pricing, etc.
+const spaFallback = (_req: express.Request, res: express.Response) => {
   res.sendFile(resolve(dashboardDir, 'index.html'), (err) => {
     if (err) res.status(404).json({ error: 'Dashboard not built', dir: dashboardDir });
   });
-});
-app.get('/dashboard/*', (_req, res) => {
-  res.sendFile(resolve(dashboardDir, 'index.html'), (err) => {
-    if (err) res.status(404).json({ error: 'Dashboard not built', dir: dashboardDir });
-  });
-});
+};
+app.get('/', spaFallback);
+app.get('/auth/*', spaFallback);
+app.get('/dashboard', spaFallback);
+app.get('/dashboard/*', spaFallback);
+app.get('/pricing', spaFallback);
 
 export { app };
