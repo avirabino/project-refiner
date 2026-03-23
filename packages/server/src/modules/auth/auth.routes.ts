@@ -20,6 +20,10 @@
  *   GET  /api/auth/profile
  *   PUT  /api/auth/profile
  *   POST /api/auth/change-password
+ *   POST /api/auth/link-request      (Track E — identity linking)
+ *   POST /api/auth/link-verify       (Track E — identity linking)
+ *   POST /api/auth/unlink            (Track E — identity unlinking)
+ *   GET  /api/auth/enrollments       (Track E — enrollment query)
  */
 import { Router } from 'express';
 import type { Request, Response } from 'express';
@@ -32,6 +36,9 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
   updateProfileSchema,
+  linkRequestSchema,
+  linkVerifySchema,
+  unlinkProductSchema,
 } from './auth.schemas.js';
 import {
   register,
@@ -45,6 +52,10 @@ import {
   updateProfile,
   refreshTokens,
   logout,
+  linkRequest,
+  linkVerify,
+  unlinkProduct,
+  getEnrollments,
   checkRateLimit,
   AuthError,
 } from './auth.service.js';
@@ -331,6 +342,78 @@ authRouter.post('/change-password', authMiddleware, async (req: Request, res: Re
     res.clearCookie('refreshToken', { path: '/api/auth' });
     res.clearCookie('__Secure-Fgp', { path: '/' });
     res.json({ message: 'Password changed. Please log in again.' });
+  } catch (err) {
+    handleAuthError(res, err);
+  }
+});
+
+// ============================================================================
+// Track E — Identity linking + enrollment routes (Sprint 09)
+// ============================================================================
+
+/** POST /api/auth/link-request (E02 — initiate cross-product link) */
+authRouter.post('/link-request', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+    const input = linkRequestSchema.parse(req.body);
+    const result = await linkRequest(req.user.id, input);
+    // Note: linkCode would be sent via Resend (email service deferred)
+    console.log(`[auth] Link code for ${req.user.email} → ${input.targetProduct}: ${result.linkCode}`);
+    res.status(201).json({
+      message: 'Link code generated. Check your email or use the code directly.',
+      expiresAt: result.expiresAt,
+    });
+  } catch (err) {
+    handleAuthError(res, err);
+  }
+});
+
+/** POST /api/auth/link-verify (E02 — confirm link with password) */
+authRouter.post('/link-verify', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+    const input = linkVerifySchema.parse(req.body);
+    const result = await linkVerify(req.user.id, input);
+    res.json({
+      message: `Successfully linked to ${result.product}`,
+      product: result.product,
+      synaptixlabsId: result.synaptixlabsId,
+    });
+  } catch (err) {
+    handleAuthError(res, err);
+  }
+});
+
+/** POST /api/auth/unlink (E02 — remove a product enrollment) */
+authRouter.post('/unlink', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+    const input = unlinkProductSchema.parse(req.body);
+    await unlinkProduct(req.user.id, input.product);
+    res.json({ message: `Unlinked from ${input.product}` });
+  } catch (err) {
+    handleAuthError(res, err);
+  }
+});
+
+/** GET /api/auth/enrollments (E03 — query cross-product enrollments) */
+authRouter.get('/enrollments', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+    const result = await getEnrollments(req.user.id);
+    res.json(result);
   } catch (err) {
     handleAuthError(res, err);
   }

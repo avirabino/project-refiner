@@ -16,8 +16,8 @@ import {
   hashToken,
 } from './jwt.utils.js';
 import type { AccessTokenPayload, RefreshTokenData, FingerprintPair } from './jwt.utils.js';
-import type { UserRow } from '../../shared/db/schema.js';
-import type { RegisterInput, LoginInput, UpdateProfileInput } from './auth.schemas.js';
+import type { UserRow, ProductEnrollment } from '../../shared/db/schema.js';
+import type { RegisterInput, LoginInput, UpdateProfileInput, LinkRequestInput, LinkVerifyInput } from './auth.schemas.js';
 import { randomBytes } from 'node:crypto';
 
 // ============================================================================
@@ -170,12 +170,18 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
   // Generate synaptixlabs_id
   const synaptixlabsId = `sl_${randomBytes(12).toString('hex')}`;
 
+  // Build initial product enrollment
+  const enrolledAt = new Date().toISOString();
+  const initialEnrollments = JSON.stringify([
+    { product: 'vigil', enrolledAt, localPlan: 'free' },
+  ]);
+
   // Create user
   const result = await pool.query(
-    `INSERT INTO users (synaptixlabs_id, email, password_hash, name, role, plan, plan_tokens, products)
-     VALUES ($1, $2, $3, $4, 'user', 'free', 100, '["vigil"]'::jsonb)
+    `INSERT INTO users (synaptixlabs_id, email, password_hash, name, role, plan, plan_tokens, products, product_enrollments)
+     VALUES ($1, $2, $3, $4, 'user', 'free', 100, '["vigil"]'::jsonb, $5::jsonb)
      RETURNING id`,
-    [synaptixlabsId, input.email, passwordHash, input.name],
+    [synaptixlabsId, input.email, passwordHash, input.name, initialEnrollments],
   );
 
   const userId = result.rows[0].id as string;
@@ -853,6 +859,290 @@ export async function cleanExpiredTokens(): Promise<number> {
     'DELETE FROM revoked_tokens WHERE expires_at < now()',
   );
   return result.rowCount ?? 0;
+}
+
+// ============================================================================
+// GOD Admin Protection (E04)
+// ============================================================================
+
+/** The GOD admin email — immutable, cannot be deleted/downgraded/unlinked. */
+export const GOD_ADMIN_EMAIL = 'admin@synaptixlabs.ai';
+
+/**
+ * Check if an email belongs to the GOD admin.
+ */
+export function isGodAdmin(email: string): boolean {
+  return email.toLowerCase() === GOD_ADMIN_EMAIL;
+}
+
+/**
+ * Check if a user ID belongs to the GOD admin.
+ */
+async function isGodAdminById(userId: string): Promise<boolean> {
+  const pool = getPool();
+  const result = await pool.query(
+    'SELECT email FROM users WHERE id = $1',
+    [userId],
+  );
+  if (result.rowCount === 0) return false;
+  return isGodAdmin(result.rows[0].email);
+}
+
+/**
+ * Delete a user. Rejects if target is GOD admin (E04).
+ */
+export async function deleteUser(userId: string): Promise<void> {
+  if (await isGodAdminById(userId)) {
+    throw new AuthError('GOD_ADMIN_IMMUTABLE', 'Cannot delete the GOD admin account', 403);
+  }
+
+  const pool = getPool();
+  const result = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+  if (result.rowCount === 0) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+}
+
+/**
+ * Update a user's role. Rejects if target is GOD admin (E04).
+ */
+export async function updateRole(userId: string, newRole: string): Promise<void> {
+  if (await isGodAdminById(userId)) {
+    throw new AuthError('GOD_ADMIN_IMMUTABLE', 'Cannot change the GOD admin role', 403);
+  }
+
+  const pool = getPool();
+  await pool.query('UPDATE users SET role = $1 WHERE id = $2', [newRole, userId]);
+}
+
+// ============================================================================
+// Identity Linking (E02)
+// ============================================================================
+
+export interface LinkRequestResult {
+  linkCode: string;
+  expiresAt: Date;
+}
+
+/**
+ * Initiate a cross-product identity link request.
+ *
+ * 1. Generate a 6-digit link code (15-min expiry)
+ * 2. Store in email_verification table with type='link'
+ * 3. Return code (for email sending or manual entry)
+ *
+ * The code is associated with the requesting user's Vigil account.
+ * The targetProduct + targetEmail identify what is being linked.
+ */
+export async function linkRequest(
+  userId: string,
+  input: LinkRequestInput,
+): Promise<LinkRequestResult> {
+  const pool = getPool();
+
+  // Verify the requesting user exists
+  const userResult = await pool.query(
+    'SELECT id, email, product_enrollments FROM users WHERE id = $1',
+    [userId],
+  );
+  if (userResult.rowCount === 0) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const user = userResult.rows[0];
+  const enrollments = (user.product_enrollments || []) as ProductEnrollment[];
+
+  // Check if already enrolled in this product
+  if (enrollments.some((e: ProductEnrollment) => e.product === input.targetProduct)) {
+    throw new AuthError('ALREADY_ENROLLED', `Already enrolled in ${input.targetProduct}`, 409);
+  }
+
+  // Generate link code
+  const linkCode = generateVerificationCode();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+  await pool.query(
+    `INSERT INTO email_verification (code, email, user_id, expires_at, type, target_product)
+     VALUES ($1, $2, $3, $4, 'link', $5)`,
+    [linkCode, input.targetEmail, userId, expiresAt, input.targetProduct],
+  );
+
+  return { linkCode, expiresAt };
+}
+
+/**
+ * Verify and complete a cross-product identity link.
+ *
+ * 1. Look up unused link code with type='link'
+ * 2. Verify the user's Vigil password (explicit consent — D040)
+ * 3. Update product_enrollments + products on the user
+ * 4. Mark code as used
+ */
+export async function linkVerify(
+  userId: string,
+  input: LinkVerifyInput,
+): Promise<{ product: string; synaptixlabsId: string }> {
+  const pool = getPool();
+
+  // Find the link code
+  const codeResult = await pool.query(
+    `SELECT id, user_id, email, expires_at, target_product
+     FROM email_verification
+     WHERE code = $1 AND type = 'link' AND used = false
+     ORDER BY created_at DESC LIMIT 1`,
+    [input.code],
+  );
+
+  if (codeResult.rowCount === 0) {
+    throw new AuthError('INVALID_CODE', 'Invalid or expired link code', 400);
+  }
+
+  const codeRow = codeResult.rows[0];
+
+  // Check expiry
+  if (new Date(codeRow.expires_at) < new Date()) {
+    throw new AuthError('CODE_EXPIRED', 'Link code has expired', 400);
+  }
+
+  // The code must belong to the requesting user
+  if (codeRow.user_id !== userId) {
+    throw new AuthError('INVALID_CODE', 'Link code does not belong to this user', 400);
+  }
+
+  // Verify the user's password (explicit consent — D040)
+  const userResult = await pool.query(
+    'SELECT password_hash, synaptixlabs_id, product_enrollments, products FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (userResult.rowCount === 0) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const user = userResult.rows[0];
+  const passwordValid = await verifyPassword(input.password, user.password_hash);
+  if (!passwordValid) {
+    throw new AuthError('INVALID_PASSWORD', 'Password is incorrect', 401);
+  }
+
+  // Update product_enrollments
+  const enrollments = (user.product_enrollments || []) as ProductEnrollment[];
+  const targetProduct = codeRow.target_product as string;
+
+  // Double-check not already enrolled (race condition guard)
+  if (enrollments.some((e: ProductEnrollment) => e.product === targetProduct)) {
+    throw new AuthError('ALREADY_ENROLLED', `Already enrolled in ${targetProduct}`, 409);
+  }
+
+  const newEnrollment: ProductEnrollment = {
+    product: targetProduct,
+    enrolledAt: new Date().toISOString(),
+    localPlan: 'free',
+  };
+
+  const updatedEnrollments = [...enrollments, newEnrollment];
+
+  // Update products array (simple string list) and product_enrollments (rich JSONB)
+  const products = (user.products || []) as string[];
+  const updatedProducts = [...new Set([...products, targetProduct])];
+
+  await pool.query(
+    `UPDATE users SET
+       product_enrollments = $1::jsonb,
+       products = $2::jsonb
+     WHERE id = $3`,
+    [JSON.stringify(updatedEnrollments), JSON.stringify(updatedProducts), userId],
+  );
+
+  // Mark code as used
+  await pool.query(
+    'UPDATE email_verification SET used = true WHERE id = $1',
+    [codeRow.id],
+  );
+
+  return {
+    product: targetProduct,
+    synaptixlabsId: user.synaptixlabs_id,
+  };
+}
+
+/**
+ * Unlink a product from the user's enrollments.
+ * Rejects if GOD admin (E04). Cannot unlink 'vigil' (home product).
+ */
+export async function unlinkProduct(userId: string, product: string): Promise<void> {
+  // E04: GOD admin cannot be unlinked
+  if (await isGodAdminById(userId)) {
+    throw new AuthError('GOD_ADMIN_IMMUTABLE', 'Cannot unlink products from the GOD admin account', 403);
+  }
+
+  // Cannot unlink the home product
+  if (product === 'vigil') {
+    throw new AuthError('CANNOT_UNLINK_HOME', 'Cannot unlink the home product (vigil)', 400);
+  }
+
+  const pool = getPool();
+
+  const userResult = await pool.query(
+    'SELECT product_enrollments, products FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (userResult.rowCount === 0) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const user = userResult.rows[0];
+  const enrollments = (user.product_enrollments || []) as ProductEnrollment[];
+  const products = (user.products || []) as string[];
+
+  // Filter out the product
+  const updatedEnrollments = enrollments.filter((e: ProductEnrollment) => e.product !== product);
+  const updatedProducts = products.filter((p: string) => p !== product);
+
+  if (updatedEnrollments.length === enrollments.length) {
+    throw new AuthError('NOT_ENROLLED', `Not enrolled in ${product}`, 404);
+  }
+
+  await pool.query(
+    `UPDATE users SET
+       product_enrollments = $1::jsonb,
+       products = $2::jsonb
+     WHERE id = $3`,
+    [JSON.stringify(updatedEnrollments), JSON.stringify(updatedProducts), userId],
+  );
+}
+
+// ============================================================================
+// Enrollment Query (E03)
+// ============================================================================
+
+export interface EnrollmentsResult {
+  synaptixlabsId: string;
+  enrollments: ProductEnrollment[];
+}
+
+/**
+ * Get the user's cross-product enrollment data.
+ * Reads from DB (not JWT).
+ */
+export async function getEnrollments(userId: string): Promise<EnrollmentsResult> {
+  const pool = getPool();
+
+  const result = await pool.query(
+    'SELECT synaptixlabs_id, product_enrollments FROM users WHERE id = $1',
+    [userId],
+  );
+
+  if (result.rowCount === 0) {
+    throw new AuthError('USER_NOT_FOUND', 'User not found', 404);
+  }
+
+  const row = result.rows[0];
+  return {
+    synaptixlabsId: row.synaptixlabs_id,
+    enrollments: (row.product_enrollments || []) as ProductEnrollment[],
+  };
 }
 
 // ============================================================================

@@ -99,3 +99,35 @@ export const updateProfileSchema = z.object({
     .nullable(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// ============================================================================
+// Track E — Identity linking + enrollment schemas (Sprint 09)
+// ============================================================================
+
+/** Product name field — lowercase identifier. */
+const productField = z
+  .string()
+  .min(1, 'Product name is required')
+  .max(50, 'Product name must not exceed 50 characters')
+  .regex(/^[a-z][a-z0-9_-]*$/, 'Product must be lowercase alphanumeric (with hyphens/underscores)')
+  .transform((v) => v.toLowerCase().trim());
+
+/** POST /api/auth/link-request */
+export const linkRequestSchema = z.object({
+  targetProduct: productField,
+  targetEmail: emailField,
+});
+export type LinkRequestInput = z.infer<typeof linkRequestSchema>;
+
+/** POST /api/auth/link-verify */
+export const linkVerifySchema = z.object({
+  code: verificationCodeField,
+  password: passwordField,
+});
+export type LinkVerifyInput = z.infer<typeof linkVerifySchema>;
+
+/** POST /api/auth/unlink */
+export const unlinkProductSchema = z.object({
+  product: productField,
+});
+export type UnlinkProductInput = z.infer<typeof unlinkProductSchema>;

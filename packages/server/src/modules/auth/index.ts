@@ -24,8 +24,23 @@ export {
   refreshTokens,
   logout,
   maybeRenewPlanTokens,
+  // Track E — identity linking + enrollment
+  linkRequest,
+  linkVerify,
+  unlinkProduct,
+  getEnrollments,
+  deleteUser,
+  updateRole,
+  isGodAdmin,
+  GOD_ADMIN_EMAIL,
 } from './auth.service.js';
-export type { RegisterResult, LoginResult, UserProfile } from './auth.service.js';
+export type {
+  RegisterResult,
+  LoginResult,
+  UserProfile,
+  LinkRequestResult,
+  EnrollmentsResult,
+} from './auth.service.js';
 
 // Password utils (for seed scripts)
 export { hashPassword, verifyPassword } from './password.utils.js';
@@ -57,6 +72,10 @@ export {
   resetPasswordSchema,
   changePasswordSchema,
   updateProfileSchema,
+  // Track E schemas
+  linkRequestSchema,
+  linkVerifySchema,
+  unlinkProductSchema,
 } from './auth.schemas.js';
 export type {
   RegisterInput,
@@ -67,4 +86,8 @@ export type {
   ResetPasswordInput,
   ChangePasswordInput,
   UpdateProfileInput,
+  // Track E types
+  LinkRequestInput,
+  LinkVerifyInput,
+  UnlinkProductInput,
 } from './auth.schemas.js';
