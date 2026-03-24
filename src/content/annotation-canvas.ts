@@ -706,7 +706,10 @@ function createCommentPin(
     const cleanupPinDrag = () => {
       document.removeEventListener('mousemove', onPinMove);
       document.removeEventListener('mouseup', onPinUp);
+      document.removeEventListener('pointerup', onPinUp);
       window.removeEventListener('mouseup', onPinUp);
+      window.removeEventListener('pointerup', onPinUp);
+      window.removeEventListener('blur', onPinUp as EventListener);
       document.documentElement.removeEventListener('mouseleave', onPinUp as EventListener);
     };
 
@@ -726,7 +729,10 @@ function createCommentPin(
 
     document.addEventListener('mousemove', onPinMove);
     document.addEventListener('mouseup', onPinUp);
+    document.addEventListener('pointerup', onPinUp);
     window.addEventListener('mouseup', onPinUp);
+    window.addEventListener('pointerup', onPinUp);
+    window.addEventListener('blur', onPinUp as EventListener);
     document.documentElement.addEventListener('mouseleave', onPinUp as EventListener);
   });
 
@@ -812,7 +818,10 @@ function applySelection(el: SVGElement, ann: Annotation): void {
     blockSync = true;
     document.addEventListener('mousemove', onInteractMove);
     document.addEventListener('mouseup', onInteractUp);
+    document.addEventListener('pointerup', onInteractUp);
     window.addEventListener('mouseup', onInteractUp);
+    window.addEventListener('pointerup', onInteractUp);
+    window.addEventListener('blur', onInteractUp);
     document.documentElement.addEventListener('mouseleave', onInteractUp as EventListener);
   });
 
@@ -884,7 +893,10 @@ function addResizeHandles(bbox: { x: number; y: number; w: number; h: number }, 
       blockSync = true;
       document.addEventListener('mousemove', onInteractMove);
       document.addEventListener('mouseup', onInteractUp);
+      document.addEventListener('pointerup', onInteractUp);
       window.addEventListener('mouseup', onInteractUp);
+      window.addEventListener('pointerup', onInteractUp);
+      window.addEventListener('blur', onInteractUp);
       document.documentElement.addEventListener('mouseleave', onInteractUp as EventListener);
     });
 
@@ -1003,7 +1015,10 @@ function onInteractMove(e: MouseEvent): void {
 function onInteractUp(e: MouseEvent | Event): void {
   document.removeEventListener('mousemove', onInteractMove);
   document.removeEventListener('mouseup', onInteractUp);
+  document.removeEventListener('pointerup', onInteractUp);
   window.removeEventListener('mouseup', onInteractUp);
+  window.removeEventListener('pointerup', onInteractUp);
+  window.removeEventListener('blur', onInteractUp);
   document.documentElement.removeEventListener('mouseleave', onInteractUp as EventListener);
 
   if (!interact.targetId) {
@@ -1104,7 +1119,10 @@ export function resetInteractionState(): void {
   interact.origPath = null;
   document.removeEventListener('mousemove', onInteractMove);
   document.removeEventListener('mouseup', onInteractUp);
+  document.removeEventListener('pointerup', onInteractUp);
   window.removeEventListener('mouseup', onInteractUp);
+  window.removeEventListener('pointerup', onInteractUp);
+  window.removeEventListener('blur', onInteractUp);
   document.documentElement.removeEventListener('mouseleave', onInteractUp as EventListener);
 }
 

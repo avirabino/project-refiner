@@ -245,29 +245,25 @@ const AnnotationCommentEditor: React.FC<CommentEditorProps> = ({ sessionId, onCl
     e.preventDefault();
     dragStart.current = { mx: e.clientX, my: e.clientY, ox: editorPos.left, oy: editorPos.top };
 
+    // All move/up handlers — no isDragging guard, cleanup always runs
     const onMove = (me: MouseEvent) => {
-      if (!isDragging.current) return;
       const nx = dragStart.current.ox + (me.clientX - dragStart.current.mx);
       const ny = dragStart.current.oy + (me.clientY - dragStart.current.my);
       setEditorPos(clamp(nx, ny));
     };
-    const onUp = () => {
-      cleanupDragListeners();
+    const cleanup = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', cleanup);
+      window.removeEventListener('mouseup', cleanup);
+      window.removeEventListener('blur', cleanup);
     };
-    const onLeave = () => {
-      cleanupDragListeners();
-    };
 
-    // Store refs for cleanup
-    dragListeners.current = { onMove, onUp, onLeave };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    window.addEventListener('mouseup', onUp);
-    document.documentElement.addEventListener('mouseleave', onLeave);
-
-    // Set isDragging AFTER listeners are registered
     isDragging.current = true;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', cleanup);
+    window.addEventListener('mouseup', cleanup);
+    window.addEventListener('blur', cleanup);  // catches alt-tab, focus loss
   }, [editorPos, clamp, cleanupDragListeners]);
 
   // Build style
