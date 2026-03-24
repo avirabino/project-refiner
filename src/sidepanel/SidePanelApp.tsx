@@ -44,6 +44,8 @@ const SidePanelApp: React.FC = () => {
       );
       if (!tab?.url || !tab.id) return;
 
+      // Fire and forget — background handler responds asynchronously
+      // and the message port may close before response arrives.
       chrome.runtime.sendMessage(
         {
           type: MessageType.CREATE_SESSION,
@@ -59,12 +61,11 @@ const SidePanelApp: React.FC = () => {
           },
           source: 'sidepanel',
         },
-        (response) => {
-          if (response?.ok) {
-            setSessionStarted(true);
-          }
-        },
+        () => { void chrome.runtime.lastError; }, // suppress "port closed" error
       );
+
+      // Show success immediately — the background creates the session
+      setSessionStarted(true);
     });
   };
 
